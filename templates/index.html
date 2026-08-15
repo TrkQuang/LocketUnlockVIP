@@ -145,6 +145,8 @@
             text-decoration: none;
             font-size: 13px;
             font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
             transition: .2s ease;
             white-space: nowrap;
         }
@@ -498,6 +500,47 @@
             cursor: pointer;
             font-size: 20px;
             line-height: 1;
+        }
+
+        .support-modal-card {
+            width: min(460px, 100%);
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+        }
+
+        .support-modal-card .vip-modal-head {
+            margin-bottom: 16px;
+        }
+
+        .support-modal-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 18px;
+            text-align: center;
+        }
+
+        .support-qr-frame {
+            width: min(320px, 100%);
+            padding: 10px;
+            border: 1px solid rgba(245, 189, 41, .32);
+            border-radius: 18px;
+            background: #fff;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, .28);
+        }
+
+        .support-qr {
+            display: block;
+            width: 100%;
+            height: auto;
+            border-radius: 11px;
+        }
+
+        .support-message {
+            margin: 0;
+            color: #d7dbe1;
+            font-size: 14px;
+            line-height: 1.7;
         }
 
         .vip-login-form {
@@ -897,10 +940,10 @@
                 </div>
             </div>
 
-            <a class="support-btn" href="#" onclick="event.preventDefault(); openVipLoginModal();">
+            <button class="support-btn" type="button" onclick="openSupportModal()" aria-controls="supportModal">
                 <span class="support-heart">♥</span>
                 Ủng hộ Admin
-            </a>
+            </button>
         </div>
     </header>
 
@@ -934,6 +977,22 @@
                     <div class="spinner" id="vipLoginLoader"></div>
                 </button>
             </form>
+        </div>
+    </div>
+
+    <div class="vip-modal" id="supportModal" role="dialog" aria-modal="true" aria-labelledby="supportModalTitle" aria-hidden="true">
+        <div class="vip-modal-card support-modal-card">
+            <div class="vip-modal-head">
+                <div class="vip-modal-title" id="supportModalTitle">Ủng hộ Admin</div>
+                <button class="vip-close-btn" id="supportModalCloseBtn" type="button" onclick="closeSupportModal()" aria-label="Đóng">×</button>
+            </div>
+
+            <div class="support-modal-content">
+                <div class="support-qr-frame">
+                    <img class="support-qr" src="{{ url_for('static', filename='qr_ungho.jpg') }}" alt="Mã QR ủng hộ Nhà Phát Triển">
+                </div>
+                <p class="support-message">Nếu bạn cảm thấy dự án hữu ích có thể quyên góp cho Nhà Phát Triển một ly cafe để tạo ra nhiều thứ hay ho hơn, arigatou</p>
+            </div>
         </div>
     </div>
 
@@ -1073,6 +1132,21 @@
 
         function closeVipLoginModal() {
             const modal = document.getElementById('vipLoginModal');
+            if (!modal) return;
+            modal.classList.remove('is-open');
+            modal.setAttribute('aria-hidden', 'true');
+        }
+
+        function openSupportModal() {
+            const modal = document.getElementById('supportModal');
+            if (!modal) return;
+            modal.classList.add('is-open');
+            modal.setAttribute('aria-hidden', 'false');
+            setTimeout(() => document.getElementById('supportModalCloseBtn')?.focus(), 50);
+        }
+
+        function closeSupportModal() {
+            const modal = document.getElementById('supportModal');
             if (!modal) return;
             modal.classList.remove('is-open');
             modal.setAttribute('aria-hidden', 'true');
@@ -1521,6 +1595,19 @@
                 if (e.target === vipLoginModal) closeVipLoginModal();
             });
         }
+
+        const supportModal = document.getElementById('supportModal');
+        if (supportModal) {
+            supportModal.addEventListener('click', (e) => {
+                if (e.target === supportModal) closeSupportModal();
+            });
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key !== 'Escape') return;
+            closeVipLoginModal();
+            closeSupportModal();
+        });
 
         if (supabaseClient) {
             supabaseClient.auth.onAuthStateChange((_event, session) => {
