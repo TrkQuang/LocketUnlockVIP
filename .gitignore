@@ -154,3 +154,5 @@ cython_debug/
 
 # macOS
 .DS_Store
+.vercel
+.env*
