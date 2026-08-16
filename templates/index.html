@@ -436,23 +436,8 @@
             text-align: center;
         }
 
-        /* ===== VIP / SESSION ===== */
-        .vip-auth-bar {
-            position: fixed;
-            top: 14px;
-            right: max(18px, calc((100vw - var(--container)) / 2 + 24px));
-            z-index: 50;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .vip-auth-email,
-        .vip-small-btn {
-            display: none !important;
-        }
-
-        .vip-modal {
+        /* ===== MODAL ===== */
+        .modal {
             position: fixed;
             inset: 0;
             z-index: 100;
@@ -464,11 +449,11 @@
             backdrop-filter: blur(8px);
         }
 
-        .vip-modal.is-open {
+        .modal.is-open {
             display: flex;
         }
 
-        .vip-modal-card {
+        .modal-card {
             width: min(420px, 100%);
             padding: 26px;
             border: 1px solid #2b343f;
@@ -477,7 +462,7 @@
             box-shadow: 0 24px 70px rgba(0, 0, 0, .35);
         }
 
-        .vip-modal-head {
+        .modal-head {
             margin-bottom: 20px;
             display: flex;
             align-items: center;
@@ -485,12 +470,12 @@
             gap: 14px;
         }
 
-        .vip-modal-title {
+        .modal-title {
             font-size: 20px;
             font-weight: 800;
         }
 
-        .vip-close-btn {
+        .modal-close-btn {
             width: 34px;
             height: 34px;
             border: 1px solid #303945;
@@ -508,7 +493,7 @@
             overflow-y: auto;
         }
 
-        .support-modal-card .vip-modal-head {
+        .support-modal-card .modal-head {
             margin-bottom: 16px;
         }
 
@@ -541,39 +526,6 @@
             color: #d7dbe1;
             font-size: 14px;
             line-height: 1.7;
-        }
-
-        .vip-login-form {
-            display: flex;
-            flex-direction: column;
-            gap: 14px;
-        }
-
-        .input-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .input-group label {
-            color: #e9ecf0;
-            font-size: 13px;
-            font-weight: 700;
-        }
-
-        .input-group input {
-            height: 48px;
-            padding: 0 14px;
-            border: 1px solid #303945;
-            border-radius: 11px;
-            outline: 0;
-            background: #0f141a;
-            color: #f5f6f8;
-            font-size: 15px;
-        }
-
-        .input-group input:focus {
-            border-color: rgba(245, 189, 41, .7);
         }
 
         /* ===== SWEETALERT / QUEUE ===== */
@@ -694,16 +646,10 @@
             }
         }
 
-        /* JS vẫn dùng 2 phần này cho history, nhưng không hiển thị ở layout mới */
+        /* History chạy trong RAM nhưng không hiển thị ở layout hiện tại */
         #live-activity-block,
-        #total-requests-count,
-        #vip-tutorial-link {
+        #total-requests-count {
             display: none !important;
-        }
-
-        /* VIP DNS button: giữ nguyên logic cũ, nhưng dùng style giao diện mới */
-        .vip-dns-btn {
-            display: flex !important;
         }
 
         /* ===== RESPONSIVE ===== */
@@ -891,7 +837,7 @@
                 letter-spacing: 1.6px;
             }
 
-            .vip-modal-card {
+            .modal-card {
                 padding: 20px;
             }
 
@@ -947,44 +893,11 @@
         </div>
     </header>
 
-    <!-- Các phần tử auth cũ vẫn được giữ để JS/backend hiện tại không bị vỡ -->
-    <div class="vip-auth-bar">
-        <span class="vip-auth-email" id="vipUserEmail"></span>
-        <button class="vip-small-btn" id="vipLoginOpenBtn" type="button" onclick="openVipLoginModal()">Đăng nhập VIP</button>
-        <button class="vip-small-btn" id="vipLogoutBtn" type="button" onclick="logoutVip()">Đăng xuất</button>
-    </div>
-
-    <div class="vip-modal" id="vipLoginModal" aria-hidden="true">
-        <div class="vip-modal-card">
-            <div class="vip-modal-head">
-                <div class="vip-modal-title">Đăng nhập VIP</div>
-                <button class="vip-close-btn" type="button" onclick="closeVipLoginModal()" aria-label="Đóng">×</button>
-            </div>
-
-            <form class="vip-login-form" id="vipLoginForm">
-                <div class="input-group">
-                    <label for="vipEmail">Email</label>
-                    <input type="email" id="vipEmail" placeholder="admin@email.com" autocomplete="email" required>
-                </div>
-
-                <div class="input-group">
-                    <label for="vipPassword">Password</label>
-                    <input type="password" id="vipPassword" placeholder="••••••••" autocomplete="current-password" required>
-                </div>
-
-                <button class="btn-primary" id="vipLoginSubmitBtn" type="submit">
-                    <span id="vipLoginSubmitText">Đăng nhập</span>
-                    <div class="spinner" id="vipLoginLoader"></div>
-                </button>
-            </form>
-        </div>
-    </div>
-
-    <div class="vip-modal" id="supportModal" role="dialog" aria-modal="true" aria-labelledby="supportModalTitle" aria-hidden="true">
-        <div class="vip-modal-card support-modal-card">
-            <div class="vip-modal-head">
-                <div class="vip-modal-title" id="supportModalTitle">Ủng hộ Admin</div>
-                <button class="vip-close-btn" id="supportModalCloseBtn" type="button" onclick="closeSupportModal()" aria-label="Đóng">×</button>
+    <div class="modal" id="supportModal" role="dialog" aria-modal="true" aria-labelledby="supportModalTitle" aria-hidden="true">
+        <div class="modal-card support-modal-card">
+            <div class="modal-head">
+                <div class="modal-title" id="supportModalTitle">Ủng hộ Admin</div>
+                <button class="modal-close-btn" id="supportModalCloseBtn" type="button" onclick="closeSupportModal()" aria-label="Đóng">×</button>
             </div>
 
             <div class="support-modal-content">
@@ -1011,8 +924,7 @@
                     </h1>
 
                     <p class="hero-desc">
-                        Hệ thống nâng cấp tự động dựa trên mã nguồn mở.<br>
-                        Không yêu cầu đăng nhập, bảo mật tuyệt đối.
+                        Hệ thống nâng cấp tự động dựa trên mã nguồn mở.
                     </p>
 
                     <div class="feature-row">
@@ -1023,10 +935,6 @@
                         <div class="feature-pill">
                             <span class="feature-check">✓</span>
                             Unlock All Frames
-                        </div>
-                        <div class="feature-pill">
-                            <span class="feature-check">✓</span>
-                            No Login Needed
                         </div>
                     </div>
                 </section>
@@ -1048,7 +956,7 @@
                         <div class="spinner" id="btnLoader"></div>
                     </button>
 
-                    <a class="dns-button vip-dns-btn" id="vipDnsBtn" href="/download-config" download>
+                    <a class="dns-button" id="dnsConfigBtn" href="/download-config" download>
                         <span class="dns-lock">⇩</span>
                         TẢI CẤU HÌNH DNS
                     </a>
@@ -1056,7 +964,7 @@
                     <div class="card-status">
                         <span class="system-live">System Live</span>
                         <span class="status-dot">•</span>
-                        <button class="mini-link" type="button" onclick="openVipLoginModal()">Support</button>
+                        <button class="mini-link" type="button" onclick="openSupportModal()">Support</button>
                     </div>
                 </aside>
             </div>
@@ -1070,11 +978,9 @@
     <!-- Hidden compatibility targets for current JS -->
     <div id="total-requests-count">0</div>
     <div id="live-activity-block"></div>
-    <a id="vip-tutorial-link" href="#" aria-hidden="true"></a>
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         const swalConfig = {
             customClass: {
@@ -1085,32 +991,8 @@
             buttonsStyling: false
         };
 
-        // Supabase chỉ dùng cho đăng nhập VIP.
-        // Không dùng Supabase Database/Realtime để lưu lịch sử request.
-        const SUPABASE_URL = 'https://zzkycxvfnufnmzyuphhw.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6a3ljeHZmbnVmbm16eXVwaGh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0NTQyMTQsImV4cCI6MjEwMjAzMDIxNH0.kfTRhdytyBBBxYWypfg-j5ztgFYqnpcfGKiL1lZ1rnE';
-        let supabaseClient = null;
-        try {
-            supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-                auth: {
-                    persistSession: false,
-                    autoRefreshToken: true,
-                    detectSessionInUrl: false
-                }
-            });
-        } catch (e) {
-            console.error('Supabase init error', e);
-        }
-
-        const GUEST_LABEL = 'Khách vãng lai';
-        const GUEST_SESSION_LIMIT = 10;
-        let currentSession = null;
-        let currentUserEmail = null;
-        let isDailyLimitExceeded = false;
-        let guestRequestCount = 0;
-
         // LIVE ACTIVITY chỉ tồn tại trong RAM của tab hiện tại.
-        // Reload/đóng tab là mất, không localStorage/IndexedDB/Supabase.
+        // Reload/đóng tab là mất, không lưu vào storage hay database.
         let activityHistory = [];
 
         function escapeHtml(value) {
@@ -1120,21 +1002,6 @@
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#039;');
-        }
-
-        function openVipLoginModal() {
-            const modal = document.getElementById('vipLoginModal');
-            if (!modal) return;
-            modal.classList.add('is-open');
-            modal.setAttribute('aria-hidden', 'false');
-            setTimeout(() => document.getElementById('vipEmail')?.focus(), 50);
-        }
-
-        function closeVipLoginModal() {
-            const modal = document.getElementById('vipLoginModal');
-            if (!modal) return;
-            modal.classList.remove('is-open');
-            modal.setAttribute('aria-hidden', 'true');
         }
 
         function openSupportModal() {
@@ -1150,113 +1017,6 @@
             if (!modal) return;
             modal.classList.remove('is-open');
             modal.setAttribute('aria-hidden', 'true');
-        }
-
-        function setMainActionState(disabled, label) {
-            const btn = document.getElementById('btnAction');
-            const text = document.getElementById('btnText');
-            if (!btn || !text) return;
-            btn.disabled = disabled;
-            text.textContent = label;
-        }
-
-        function applySessionUi() {
-            const loginBtn = document.getElementById('vipLoginOpenBtn');
-            const logoutBtn = document.getElementById('vipLogoutBtn');
-            const emailEl = document.getElementById('vipUserEmail');
-            const dnsBtn = document.getElementById('vipDnsBtn');
-            const tutorialLink = document.getElementById('vip-tutorial-link');
-
-            if (currentSession) {
-                if (loginBtn) loginBtn.style.display = 'none';
-                if (logoutBtn) logoutBtn.style.display = 'inline-flex';
-                if (emailEl) {
-                    emailEl.textContent = `Xin chào ${currentUserEmail}`;
-                    emailEl.style.display = 'inline-block';
-                }
-                if (dnsBtn) dnsBtn.style.display = 'inline-flex';
-                if (tutorialLink) tutorialLink.style.display = 'inline-block';
-                setMainActionState(false, 'UPGRADE TO GOLD');
-                return;
-            }
-
-            if (loginBtn) loginBtn.style.display = 'inline-flex';
-            if (logoutBtn) logoutBtn.style.display = 'none';
-            if (emailEl) {
-                emailEl.textContent = '';
-                emailEl.style.display = 'none';
-            }
-            if (dnsBtn) dnsBtn.style.display = 'none';
-            if (tutorialLink) tutorialLink.style.display = 'none';
-        }
-
-        async function loginVip(email, password) {
-            if (!supabaseClient) throw new Error('Supabase chưa sẵn sàng.');
-            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-            if (error) throw error;
-
-            currentSession = data.session;
-            currentUserEmail = data.user?.email || email;
-            isDailyLimitExceeded = false;
-            applySessionUi();
-            closeVipLoginModal();
-            Swal.fire({ icon: 'success', title: 'Đã đăng nhập VIP', text: `Xin chào ${currentUserEmail}`, ...swalConfig });
-        }
-
-        async function logoutVip() {
-            if (supabaseClient) {
-                const { error } = await supabaseClient.auth.signOut();
-                if (error) {
-                    Swal.fire({ icon: 'error', title: 'Lỗi', text: error.message || 'Không thể đăng xuất.', ...swalConfig });
-                    return;
-                }
-            }
-
-            currentSession = null;
-            currentUserEmail = null;
-            applySessionUi();
-            await checkDailyLimit();
-        }
-
-        async function checkUserSession() {
-            if (!supabaseClient) {
-                applySessionUi();
-                await checkDailyLimit();
-                return null;
-            }
-
-            const { data, error } = await supabaseClient.auth.getSession();
-            if (error) console.error('Supabase session error', error);
-
-            currentSession = data?.session || null;
-            currentUserEmail = currentSession?.user?.email || null;
-            applySessionUi();
-
-            if (currentSession) {
-                isDailyLimitExceeded = false;
-                setMainActionState(false, 'UPGRADE TO GOLD');
-            } else {
-                await checkDailyLimit();
-            }
-
-            return currentSession;
-        }
-
-        // Không dùng database để đếm lượt nữa.
-        // Giới hạn khách chỉ tính trong phiên/tab hiện tại và reset khi reload.
-        async function checkDailyLimit() {
-            if (currentSession) {
-                isDailyLimitExceeded = false;
-                setMainActionState(false, 'UPGRADE TO GOLD');
-                return false;
-            }
-
-            isDailyLimitExceeded = guestRequestCount >= GUEST_SESSION_LIMIT;
-            setMainActionState(
-                isDailyLimitExceeded,
-                isDailyLimitExceeded ? 'Phiên này đã hết lượt' : 'UPGRADE TO GOLD'
-            );
-            return isDailyLimitExceeded;
         }
 
         function getStatusBadge(statusValue) {
@@ -1296,10 +1056,6 @@
             historyContainer.innerHTML = activityHistory.map(item => {
                 const username = item.username || '—';
                 const safeUsername = escapeHtml(username);
-                const requestedBy = item.requested_by || GUEST_LABEL;
-                const isVipRequest = requestedBy !== GUEST_LABEL;
-                const requestedByLabel = isVipRequest ? `👑 VIP: ${requestedBy}` : `👤 ${GUEST_LABEL}`;
-                const requestedByClass = isVipRequest ? 'vip' : 'guest';
                 const created = item.created_at ? new Date(item.created_at).toLocaleString('vi-VN') : '';
                 const avatarUrl = item.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(username || 'User') + '&background=random&color=fff&size=40';
 
@@ -1308,7 +1064,6 @@
                         <img src="${escapeHtml(avatarUrl)}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 1px solid rgba(255, 255, 255, 0.1);" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(username || 'User')}&background=random&color=fff&size=40'">
                         <div style="flex-grow: 1; min-width: 0;">
                             <div class="history-item-username">@${safeUsername}</div>
-                            <span class="history-requested-by ${requestedByClass}">${escapeHtml(requestedByLabel)}</span>
                             <div class="history-item-meta" style="display: flex; gap: 8px; align-items: center;">
                                 <span>${escapeHtml(item.client_id || '—')}</span>
                                 <div style="font-size: 10px; color: var(--text-muted);">${escapeHtml(created)}</div>
@@ -1327,7 +1082,6 @@
                 client_id: clientId,
                 username,
                 avatar_url: avatarUrl,
-                requested_by: currentUserEmail || GUEST_LABEL,
                 status: 'waiting',
                 created_at: new Date().toISOString()
             });
@@ -1350,11 +1104,6 @@
             const btn = document.getElementById('btnAction');
             const loader = document.getElementById('btnLoader');
             const text = document.getElementById('btnText');
-
-            if (!currentSession && isDailyLimitExceeded) {
-                Swal.fire({ icon: 'warning', title: 'Phiên này đã hết lượt', text: 'Khách vãng lai chỉ có 10 lượt trong phiên hiện tại. Reload trang sẽ tạo phiên mới.', ...swalConfig });
-                return;
-            }
 
             if (!user) {
                 Swal.fire({ icon: 'warning', title: 'Thông báo', text: 'Vui lòng nhập username.', ...swalConfig });
@@ -1381,10 +1130,10 @@
             } catch (e) {
                 Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Mất kết nối server.', ...swalConfig });
             } finally {
-                btn.disabled = !currentSession && isDailyLimitExceeded;
+                btn.disabled = false;
                 loader.style.display = 'none';
                 text.style.display = 'block';
-                text.textContent = (!currentSession && isDailyLimitExceeded) ? 'Phiên này đã hết lượt' : 'UPGRADE TO GOLD';
+                text.textContent = 'UPGRADE TO GOLD';
             }
         }
 
@@ -1414,18 +1163,9 @@
             let currentClientId = null;
 
             try {
-                if (!currentSession && await checkDailyLimit()) {
-                    Swal.fire({ icon: 'warning', title: 'Phiên này đã hết lượt', text: 'Khách vãng lai chỉ có 10 lượt trong phiên hiện tại.', ...swalConfig });
-                    return;
-                }
-
                 currentClientId = Date.now().toString();
                 addLocalActivity(currentClientId, user, avatarUrl);
 
-                if (!currentSession) {
-                    guestRequestCount += 1;
-                    await checkDailyLimit();
-                }
 
                 const res = await fetch('/api/restore', {
                     method: 'POST',
@@ -1556,46 +1296,6 @@
             else el.textContent = `${Math.floor(etaVal / 60)}p ${etaVal % 60}s`;
         }
 
-        const vipLoginForm = document.getElementById('vipLoginForm');
-        if (vipLoginForm) {
-            vipLoginForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-
-                const email = document.getElementById('vipEmail')?.value.trim();
-                const password = document.getElementById('vipPassword')?.value;
-                const submitBtn = document.getElementById('vipLoginSubmitBtn');
-                const submitText = document.getElementById('vipLoginSubmitText');
-                const submitLoader = document.getElementById('vipLoginLoader');
-
-                if (!email || !password) {
-                    Swal.fire({ icon: 'warning', title: 'Thiếu thông tin', text: 'Vui lòng nhập email và password.', ...swalConfig });
-                    return;
-                }
-
-                if (submitBtn) submitBtn.disabled = true;
-                if (submitText) submitText.style.display = 'none';
-                if (submitLoader) submitLoader.style.display = 'block';
-
-                try {
-                    await loginVip(email, password);
-                    vipLoginForm.reset();
-                } catch (error) {
-                    Swal.fire({ icon: 'error', title: 'Đăng nhập thất bại', text: error.message || 'Email hoặc password không đúng.', ...swalConfig });
-                } finally {
-                    if (submitBtn) submitBtn.disabled = false;
-                    if (submitText) submitText.style.display = 'block';
-                    if (submitLoader) submitLoader.style.display = 'none';
-                }
-            });
-        }
-
-        const vipLoginModal = document.getElementById('vipLoginModal');
-        if (vipLoginModal) {
-            vipLoginModal.addEventListener('click', (e) => {
-                if (e.target === vipLoginModal) closeVipLoginModal();
-            });
-        }
-
         const supportModal = document.getElementById('supportModal');
         if (supportModal) {
             supportModal.addEventListener('click', (e) => {
@@ -1605,26 +1305,10 @@
 
         document.addEventListener('keydown', (e) => {
             if (e.key !== 'Escape') return;
-            closeVipLoginModal();
             closeSupportModal();
         });
 
-        if (supabaseClient) {
-            supabaseClient.auth.onAuthStateChange((_event, session) => {
-                currentSession = session || null;
-                currentUserEmail = currentSession?.user?.email || null;
-                applySessionUi();
-                if (currentSession) {
-                    isDailyLimitExceeded = false;
-                    setMainActionState(false, 'UPGRADE TO GOLD');
-                } else {
-                    checkDailyLimit();
-                }
-            });
-        }
-
         renderLocalActivityHistory();
-        checkUserSession();
 
         document.getElementById('username').onkeyup = e => e.key === 'Enter' && checkUser();
     </script>
