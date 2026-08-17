@@ -1,15 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+
 <plist version="1.0">
   <dict>
+
     <key>PayloadDisplayName</key>
     <string>LocketGold</string>
 
     <key>PayloadDescription</key>
-    <string>This profile enables NextDNS on all networks using the native Encrypted DNS feature.</string>
+    <string>This profile enables Cloudflare Gateway encrypted DNS on all networks.</string>
 
     <key>PayloadIdentifier</key>
-    <string>io.nextdns.7d3775.profile</string>
+    <string>com.locketgold.cloudflare.profile</string>
 
     <key>PayloadScope</key>
     <string>System</string>
@@ -18,7 +20,7 @@
     <string>Configuration</string>
 
     <key>PayloadUUID</key>
-    <string>A1E2F262-DB73-40F6-BD22-2E42A43A3C94.7d3775</string>
+    <string>4C2E4174-58CC-4D04-A91D-9D095F770001</string>
 
     <key>PayloadVersion</key>
     <integer>1</integer>
@@ -26,17 +28,21 @@
     <key>PayloadContent</key>
     <array>
       <dict>
+
         <key>DNSSettings</key>
         <dict>
+
           <key>DNSProtocol</key>
           <string>HTTPS</string>
 
           <key>ServerURL</key>
-          <string>https://apple.dns.nextdns.io/7d3775/LocketGold</string>
+          <string>https://bxb9l1j9j0.cloudflare-gateway.com/dns-query</string>
+
         </dict>
 
         <key>OnDemandRules</key>
         <array>
+
           <dict>
             <key>Action</key>
             <string>EvaluateConnection</string>
@@ -44,6 +50,7 @@
             <key>ActionParameters</key>
             <array>
               <dict>
+
                 <key>DomainAction</key>
                 <string>NeverConnect</string>
 
@@ -57,6 +64,7 @@
                   <string>tma.vvm.mone.pan-net.eu</string>
                   <string>vvm.ee.co.uk</string>
                 </array>
+
               </dict>
             </array>
           </dict>
@@ -65,26 +73,29 @@
             <key>Action</key>
             <string>Connect</string>
           </dict>
+
         </array>
 
         <key>PayloadType</key>
         <string>com.apple.dnsSettings.managed</string>
 
         <key>PayloadIdentifier</key>
-        <string>io.nextdns.7d3775.profile.dnsSettings.managed</string>
+        <string>com.locketgold.cloudflare.dns</string>
 
         <key>PayloadUUID</key>
-        <string>A1E2F262-DB73-40F6-BD22-2E42A43A3C94.7d3775.dnsSettings.managed</string>
+        <string>4C2E4174-58CC-4D04-A91D-9D095F770002</string>
 
         <key>PayloadDisplayName</key>
         <string>LocketGold</string>
 
         <key>PayloadOrganization</key>
-        <string>NextDNS</string>
+        <string>Cloudflare Gateway</string>
 
         <key>PayloadVersion</key>
         <integer>1</integer>
+
       </dict>
     </array>
+
   </dict>
 </plist>
