@@ -1,8 +1,6 @@
 import json
 import requests
 import time
-import re
-from urllib.parse import urlparse, parse_qs
 
 
 class LocketAPI:
@@ -23,129 +21,29 @@ class LocketAPI:
             "User-Agent": "com.locket.Locket/2.61.0 iPhone/26.2 hw/iPhone12_1",
             "firebase-instance-id-token": "deWLCNaPWEcEqPS5XzGJLf:APA91bEktxNw6IDfOTIOJfnINd9ltplT6cwkH4Dp2AMR08coonnBdZ1IXKt5RZktaFFVA8eJeC3h1xOeB7dGALzfrIQ51GDCC4zJa-NMz83e4Uoeh-ccVQg",
         }
+
     def getUserByUsername(self, username):
         if not username:
             raise ValueError("Username is required")
 
-        username = username.strip().lstrip("@")
-        url = f"https://locket.cam/{username}"
-
-        print("\n========== USER LOOKUP ==========")
-        print(f"[>] Username    : {username}")
-        print(f"[>] Request URL : {url}")
-
-        try:
-            response = requests.get(
-                url,
-                headers={
-                    "User-Agent": (
-                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                        "AppleWebKit/537.36 (KHTML, like Gecko) "
-                        "Chrome/124.0 Safari/537.36"
-                    )
-                },
-                timeout=15,
-            )
-
-            print(f"[<] Status       : {response.status_code}")
-            print(f"[<] Final URL    : {response.url}")
-
-            if response.status_code != 200:
-                raise Exception(
-                    f"Locket returned HTTP {response.status_code}"
-                )
-
-            html = response.text
-
-            # ==========================================
-            # 1. Lấy invite link
-            # ==========================================
-
-            match = re.search(
-                r'window\.location\.href\s*=\s*"([^"]+)"',
-                html
-            )
-
-            if not match:
-                print("[-] Không tìm thấy Dynamic Link")
-                return None
-
-            dynamic_link = match.group(1)
-
-            parsed = urlparse(dynamic_link)
-            link = parse_qs(parsed.query).get("link", [None])[0]
-
-            print(f"[+] Invite link : {link}")
-
-            if not link:
-                print("[-] Không tìm thấy invite link")
-                return None
-
-            # ==========================================
-            # 2. Lấy UID
-            # ==========================================
-
-            invite_path = urlparse(link).path
-
-            uid_match = re.search(
-                r"/invites/([^/?]+)",
-                invite_path
-            )
-
-            if not uid_match:
-                print("[-] Không tìm thấy UID")
-                return None
-
-            uid = uid_match.group(1)
-
-            print(f"[+] UID         : {uid}")
-
-            # ==========================================
-            # 3. Lấy profile picture
-            # ==========================================
-
-            image_match = re.search(
-                r'<img[^>]+class="profile-pic-img"[^>]+src=([^\s>]+)',
-                html,
-                re.IGNORECASE
-            )
-
-            profile_picture_url = None
-
-            if image_match:
-                profile_picture_url = image_match.group(1).strip('"\'')
-                print(f"[+] Profile Pic  : {profile_picture_url}")
-            else:
-                print("[-] Không tìm thấy profile picture")
-
-            # ==========================================
-            # 4. Tạo response giống API m mong muốn
-            # ==========================================
-
-            result = {
-                "result": {
-                    "data": {
-                        "uid": uid,
-                        "first_name": None,
-                        "last_name": None,
-                        "badge": None,
-                        "profile_picture_url": profile_picture_url,
-                        "temp": False,
-                        "username": username
-                    },
-                    "status": 200
-                }
+        request_payload = {
+            "data": {
+                "username": username,
             }
+        }
 
-            print("\n========== RESULT ==========")
-            print(result)
-            print("============================\n")
-
-            return result
-
-        except requests.RequestException as e:
-            print(f"[!] Request error: {e}")
-            return None
+        response = requests.post(
+            "https://api.locketcamera.com/getUserByUsername",
+            headers=self.headers,
+            json=request_payload,
+        )
+        # print(response.json())
+        if response.ok:
+            return response.json()
+        else:
+            raise Exception(
+                f"API request failed with status code {response.status_code}: {response.text}"
+            )
 
     def restorePurchase(self, uid):
         """Restores the purchase using the provided token.
