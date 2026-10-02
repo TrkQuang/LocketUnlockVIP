@@ -1385,7 +1385,30 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 
-    <script>
+        <script>
+        // ===== VIP TABS SWITCHER =====
+        function switchVipTab(tabName) {
+            const btnActivate = document.getElementById('tabBtnActivate');
+            const btnGuide = document.getElementById('tabBtnGuide');
+            const contentActivate = document.getElementById('tabContentActivate');
+            const contentGuide = document.getElementById('tabContentGuide');
+
+            if (!btnActivate || !btnGuide) return;
+
+            if (tabName === 'guide') {
+                btnActivate.classList.remove('active');
+                btnGuide.classList.add('active');
+                if (contentActivate) contentActivate.style.display = 'none';
+                if (contentGuide) contentGuide.style.display = 'block';
+            } else {
+                btnGuide.classList.remove('active');
+                btnActivate.classList.add('active');
+                if (contentGuide) contentGuide.style.display = 'none';
+                if (contentActivate) contentActivate.style.display = 'block';
+            }
+        }
+        window.switchVipTab = switchVipTab;
+
         const swalDark = {
             customClass: {
                 popup: 'clean-popup',
