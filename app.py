@@ -509,6 +509,20 @@ def payment_create_order():
             account_no = payos_res.account_number
             account_name = payos_res.account_name
             content = payos_res.description
+
+            BIN_MAP = {
+                "970422": "MBBank (Quân Đội)",
+                "970436": "Vietcombank",
+                "970415": "VietinBank",
+                "970418": "BIDV",
+                "970407": "Techcombank",
+                "970416": "ACB",
+                "970423": "TPBank",
+                "970403": "Sacombank",
+                "970432": "VPBank",
+            }
+            bank_display = BIN_MAP.get(str(bank_id), f"Napas247 ({bank_id})")
+
             qr_url = (
                 f"https://img.vietqr.io/image/{bank_id}-{account_no}-compact2.png"
                 f"?amount={amount}&addInfo={requests.utils.quote(content)}&accountName={requests.utils.quote(account_name)}"
@@ -516,11 +530,13 @@ def payment_create_order():
             print(f"[payOS] Created checkout link: {checkout_url}")
         except Exception as e:
             print(f"[payOS Error] Fallback VietQR: {e}")
+            bank_display = BANK_ID
             qr_url = (
                 f"https://img.vietqr.io/image/{BANK_ID}-{ACCOUNT_NO}-compact2.png"
                 f"?amount={amount}&addInfo={content}&accountName={requests.utils.quote(ACCOUNT_NAME)}"
             )
     else:
+        bank_display = BANK_ID
         qr_url = (
             f"https://img.vietqr.io/image/{BANK_ID}-{ACCOUNT_NO}-compact2.png"
             f"?amount={amount}&addInfo={content}&accountName={requests.utils.quote(ACCOUNT_NAME)}"
@@ -532,13 +548,14 @@ def payment_create_order():
         "qr_url": qr_url,
         "checkout_url": checkout_url,
         "bank_info": {
-            "bank_id": bank_id,
+            "bank_id": bank_display,
             "account_no": account_no,
             "account_name": account_name,
             "amount": amount,
             "content": content,
         }
     })
+
 
 
 @app.route("/api/payment/check-status", methods=["GET"])
@@ -573,10 +590,16 @@ def payment_webhook():
     data = request.json or {}
     print(f"[Payment Webhook] Received payload: {data}")
 
-    # Xử lý trường hợp test ping xác nhận webhook URL từ payOS Dashboard
-    if data.get("desc") == "Webhook confirm" or (data.get("data") and data["data"].get("description") == "Webhook confirm"):
+    # Xử lý trường hợp test ping xác nhận webhook URL từ payOS Dashboard hoặc API
+    if (
+        "webhookUrl" in data
+        or data.get("desc") == "Webhook confirm"
+        or (data.get("data") and data["data"].get("description") == "Webhook confirm")
+        or (data.get("data") and str(data["data"].get("description", "")).lower().startswith("webhook"))
+        or (data.get("data") and data["data"].get("orderCode") == 123)
+    ):
         print("[payOS Webhook] Webhook URL confirmed by payOS")
-        return jsonify({"success": True, "msg": "Webhook confirmed"}), 200
+        return jsonify({"success": True, "msg": "Webhook confirmed", "webhookUrl": data.get("webhookUrl")}), 200
 
     if not payos_client:
         return jsonify({"success": False, "msg": "payOS chưa được khởi tạo"}), 500
@@ -616,6 +639,26 @@ def payment_webhook():
         "success": True,
         "msg": f"Duyệt đơn hàng {order_code} và kích hoạt VIP Vĩnh Viễn thành công!"
     })
+
+
+@app.route("/api/payment/confirm-webhook", methods=["GET", "POST"])
+def payment_confirm_webhook():
+    """
+    Endpoint tự động đăng ký và xác thực Webhook với payOS
+    """
+    if not payos_client:
+        return jsonify({"success": False, "msg": "payOS chưa được khởi tạo"}), 500
+    webhook_url = os.getenv("PAYOS_WEBHOOK_URL", "https://locket-pre.vercel.app/api/payment/webhook")
+    try:
+        res = payos_client.webhooks.confirm(webhook_url)
+        return jsonify({
+            "success": True,
+            "msg": f"Xác nhận Webhook thành công với payOS: {webhook_url}",
+            "result": str(res)
+        })
+    except Exception as e:
+        return jsonify({"success": False, "msg": f"Lỗi xác nhận Webhook: {str(e)}"}), 500
+
 
 
 

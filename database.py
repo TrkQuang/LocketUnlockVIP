@@ -1,4 +1,4 @@
-﻿# database.py - Kết nối Cloud Database Supabase (100% Free, hoạt động tốt trên Vercel Serverless)
+# database.py - Kết nối Cloud Database Supabase (100% Free, hoạt động tốt trên Vercel Serverless)
 import os
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -131,19 +131,21 @@ def create_order(user_id, amount=30000):
     if not client:
         return None
 
-    now = datetime.now()
-    # Kiểm tra đơn pending gần đây
-    res = client.table("orders").select("*").eq("user_id", user_id).eq("status", "pending").order("id", desc=True).limit(1).execute()
-    if res.data:
-        existing_order = res.data[0]
-        # Nếu mã đơn là số hợp lệ thì tái sử dụng
-        if str(existing_order.get("order_code", "")).isdigit():
-            return existing_order
-
     import time
-    # Sinh mã đơn dạng số nguyên duy nhất (tương thích payOS orderCode)
+    now = datetime.now()
+    # Mỗi lần tạo đơn luôn sinh mã số nguyên duy nhất (payOS yêu cầu orderCode không được trùng)
     order_code_int = int(time.time() * 10) % 9000000000 + (int(user_id) % 100)
     order_code = str(order_code_int)
+
+    # Nếu có đơn pending cũ thì cập nhật mã đơn mới để PayOS tạo link mới không bị trùng
+    res = client.table("orders").select("id").eq("user_id", user_id).eq("status", "pending").order("id", desc=True).limit(1).execute()
+    if res.data:
+        old_id = res.data[0]["id"]
+        client.table("orders").update({
+            "order_code": order_code,
+            "created_at": now.isoformat()
+        }).eq("id", old_id).execute()
+        return get_order_by_code(order_code)
 
     order_data = {
         "user_id": user_id,
@@ -154,6 +156,7 @@ def create_order(user_id, amount=30000):
     }
     insert_res = client.table("orders").insert(order_data).execute()
     return insert_res.data[0] if insert_res.data else None
+
 
 def get_order_by_code(order_code):
     client = get_supabase()
