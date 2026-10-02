@@ -60,6 +60,11 @@ cover/
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
+*.db
+*.sqlite
+
+db.sqlite3
+db.sqlite3-journal
 
 # Flask stuff:
 instance/
@@ -157,3 +162,7 @@ cython_debug/
 .vercel
 .env*
 pyrightconfig.json
+
+.playwright-mcp/
+*.png
+*.log

@@ -1,3 +1,5 @@
+from payos import PayOS
+from payos.types import CreatePaymentLinkRequest, ItemData
 import os
 import sys
 import json
@@ -7,10 +9,12 @@ import requests
 import queue
 import threading
 import uuid
+import re
 from datetime import datetime
 import dotenv
-from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask import Flask, render_template, request, jsonify, send_from_directory, session
 from api import LocketAPI
+import database
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 dotenv.load_dotenv(os.path.join(BASE_DIR, ".env"))
@@ -21,7 +25,35 @@ app = Flask(
     static_folder=os.path.join(BASE_DIR, "static"),
 )
 
-# Initialize API (Không cần Auth nữa)
+# Cấu hình Secret Key cho Flask Session
+app.secret_key = os.getenv("SECRET_KEY", "locketgold_vip_secret_key_sgu_2026")
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+
+# Khởi tạo Database SQLite (100% Miễn phí, lưu người dùng & VIP)
+database.init_db()
+
+# Cấu hình ngân hàng VietQR & giá gói
+BANK_ID = os.getenv("BANK_ID", "MB")
+ACCOUNT_NO = os.getenv("ACCOUNT_NO", "0333835697")
+ACCOUNT_NAME = os.getenv("ACCOUNT_NAME", "TRAN QUANG")
+VIP_PRICE = int(os.getenv("VIP_PRICE", "30000"))
+
+# Cấu hình payOS Payment Gateway
+PAYOS_CLIENT_ID = os.getenv("PAYOS_CLIENT_ID")
+PAYOS_API_KEY = os.getenv("PAYOS_API_KEY")
+PAYOS_CHECKSUM_KEY = os.getenv("PAYOS_CHECKSUM_KEY")
+
+payos_client = None
+if PAYOS_CLIENT_ID and PAYOS_API_KEY and PAYOS_CHECKSUM_KEY:
+    try:
+        payos_client = PayOS(PAYOS_CLIENT_ID, PAYOS_API_KEY, PAYOS_CHECKSUM_KEY)
+        print("[payOS] Khởi tạo cổng thanh toán payOS thành công.")
+    except Exception as e:
+        print(f"[payOS Error] Không thể khởi tạo payOS: {e}")
+
+
+# Initialize API Locket
 subscription_ids = [
     "locket_1600_1y",
     "locket_199_1m",
@@ -194,12 +226,11 @@ class QueueManager:
             # 2. Restore purchase trực tiếp từ RevenueCat
             restore_result = api.restorePurchase(uid_target)
 
-            # Check entitlement thật từ RevenueCat (dữ liệu thật, không ghi đè fake)
+            # Check entitlement thật từ RevenueCat
             subscriber = restore_result.get("subscriber", {})
             entitlements = subscriber.get("entitlements", {})
             gold_entitlement = entitlements.get("Gold", {})
 
-            # Nếu mua thành công
             if gold_entitlement:
                 real_product_id = gold_entitlement.get("product_identifier", "locket_1600_1y")
                 real_expires_date = gold_entitlement.get("expires_date") or "N/A"
@@ -218,6 +249,7 @@ class QueueManager:
                         "success": True,
                         "msg": f"Nâng cấp Gold cho @{username} thành công!",
                         "product": real_product_id,
+                        "uid": uid_target,
                         "expires_date": real_expires_date,
                         "purchase_date": real_purchase_date,
                     }
@@ -235,6 +267,403 @@ class QueueManager:
 
 queue_manager = QueueManager()
 
+
+# ==============================================================================
+# TELEGRAM NOTIFICATIONS
+# ==============================================================================
+
+def send_telegram_notification(username, uid, product_id, raw_json):
+    bot_token = os.getenv("TELEGRAM_BOT_TOKEN") or "8858813567:AAH5KAfVQDXnf7w_bDvQsq5oQnHVggRqT2w"
+    chat_id = os.getenv("TELEGRAM_CHAT_ID") or "7530810928"
+
+    if not bot_token or not chat_id:
+        return
+
+    try:
+        gold_info = raw_json.get("subscriber", {}).get("entitlements", {}).get("Gold", {})
+        expires_date = gold_info.get("expires_date") or "N/A"
+        product = gold_info.get("product_identifier", product_id or "locket_1600_1y")
+
+        safe_user = html.escape(str(username or "unknown"))
+        safe_uid = html.escape(str(uid or "unknown"))
+        safe_product = html.escape(str(product))
+        safe_expires = html.escape(str(expires_date))
+        now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        subscription_info = json.dumps(gold_info, indent=2, ensure_ascii=False)
+        safe_sub_info = html.escape(subscription_info)
+
+        message = (
+            f"✅ <b>Locket Gold Unlocked Thành Công!</b>\n\n"
+            f"👤 <b>Username:</b> @{safe_user}\n"
+            f"🆔 <b>UID:</b> <code>{safe_uid}</code>\n"
+            f"📦 <b>Gói:</b> <code>{safe_product}</code>\n"
+            f"⏳ <b>Hạn dùng:</b> <code>{safe_expires}</code>\n"
+            f"⏰ <b>Thời gian:</b> {now_str}\n\n"
+            f"<b>Chi tiết đăng ký:</b>\n<pre>{safe_sub_info}</pre>"
+        )
+
+        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        payload = {"chat_id": chat_id, "text": message, "parse_mode": "HTML"}
+        requests.post(url, json=payload, timeout=10)
+    except Exception as e:
+        print(f"[Telegram] Failed to send notification: {e}")
+
+
+def send_telegram_error(username, error_msg):
+    bot_token = os.getenv("TELEGRAM_BOT_TOKEN") or "8858813567:AAH5KAfVQDXnf7w_bDvQsq5oQnHVggRqT2w"
+    chat_id = os.getenv("TELEGRAM_CHAT_ID") or "7530810928"
+
+    if not bot_token or not chat_id:
+        return
+
+    try:
+        safe_user = html.escape(str(username or "unknown"))
+        safe_err = html.escape(str(error_msg or "Lỗi không xác định"))
+        now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        message = (
+            f"❌ <b>Locket Gold Nâng Cấp Thất Bại</b>\n\n"
+            f"👤 <b>Username:</b> @{safe_user}\n"
+            f"⚠️ <b>Lỗi:</b> <code>{safe_err}</code>\n"
+            f"⏰ <b>Thời gian:</b> {now_str}"
+        )
+
+        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        payload = {"chat_id": chat_id, "text": message, "parse_mode": "HTML"}
+        requests.post(url, json=payload, timeout=10)
+    except Exception as e:
+        print(f"[Telegram] Failed to send error notification: {e}")
+
+
+def send_telegram_payment_alert(user, order):
+    bot_token = os.getenv("TELEGRAM_BOT_TOKEN") or "8858813567:AAH5KAfVQDXnf7w_bDvQsq5oQnHVggRqT2w"
+    chat_id = os.getenv("TELEGRAM_CHAT_ID") or "7530810928"
+
+    if not bot_token or not chat_id:
+        return
+
+    try:
+        now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        safe_user = html.escape(str(user.get("username", "Khách hàng")))
+        safe_order = html.escape(str(order.get("order_code", "LK")))
+        amount_fmt = f"{order.get('amount', 30000):,}đ"
+
+        message = (
+            f"🎉 <b>NHẬN THANH TOÁN 30K - TỰ ĐỘNG NÂNG CẤP VIP!</b>\n\n"
+            f"👤 <b>Tài khoản web:</b> @{safe_user}\n"
+            f"💵 <b>Số tiền nạp:</b> <code>{amount_fmt}</code>\n"
+            f"🧾 <b>Mã giao dịch:</b> <code>{safe_order}</code>\n"
+            f"💎 <b>Gói:</b> VIP ACCOUNT (Bảo hành & dùng tối thiểu 6 tháng)\n"
+            f"⏰ <b>Thời gian:</b> {now_str}"
+        )
+
+        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        payload = {"chat_id": chat_id, "text": message, "parse_mode": "HTML"}
+        requests.post(url, json=payload, timeout=10)
+    except Exception as e:
+        print(f"[Telegram] Failed to send payment alert: {e}")
+
+
+# ==============================================================================
+# AUTHENTICATION ROUTES (ĐĂNG KÝ / ĐĂNG NHẬP / THÔNG TIN TÀI KHOẢN)
+# ==============================================================================
+
+@app.route("/api/auth/register", methods=["POST"])
+def auth_register():
+    data = request.json or {}
+    username = data.get("username", "").strip()
+    password = data.get("password", "")
+    email = data.get("email", "").strip()
+
+    if not username:
+        return jsonify({"success": False, "msg": "Vui lòng nhập tên đăng nhập"}), 400
+    if not password:
+        return jsonify({"success": False, "msg": "Vui lòng nhập mật khẩu"}), 400
+
+    try:
+        user = database.register_user(username, password, email)
+        session["user_id"] = user["id"]
+        return jsonify({
+            "success": True,
+            "msg": "Đăng ký tài khoản thành công!",
+            "user": user
+        })
+    except ValueError as ve:
+        return jsonify({"success": False, "msg": str(ve)}), 400
+    except Exception as e:
+        return jsonify({"success": False, "msg": f"Lỗi hệ thống: {str(e)}"}), 500
+
+
+@app.route("/api/auth/login", methods=["POST"])
+def auth_login():
+    data = request.json or {}
+    username = data.get("username", "").strip()
+    password = data.get("password", "")
+
+    if not username or not password:
+        return jsonify({"success": False, "msg": "Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu"}), 400
+
+    try:
+        user = database.authenticate_user(username, password)
+        if not user:
+            return jsonify({"success": False, "msg": "Tên đăng nhập hoặc mật khẩu không chính xác"}), 401
+
+        session["user_id"] = user["id"]
+        # Không trả về hash password ra ngoài
+        clean_user = {
+            "id": user["id"],
+            "username": user["username"],
+            "email": user["email"],
+            "is_vip": user["is_vip"],
+            "vip_expires_at": user["vip_expires_at"],
+            "created_at": user["created_at"],
+        }
+        return jsonify({
+            "success": True,
+            "msg": "Đăng nhập thành công!",
+            "user": clean_user
+        })
+    except Exception as e:
+        return jsonify({"success": False, "msg": f"Lỗi: {str(e)}"}), 500
+
+
+@app.route("/api/auth/logout", methods=["POST"])
+def auth_logout():
+    session.pop("user_id", None)
+    return jsonify({"success": True, "msg": "Đã đăng xuất thành công"})
+
+
+@app.route("/api/auth/me", methods=["GET"])
+def auth_me():
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"logged_in": False})
+
+    user = database.get_user_by_id(user_id)
+    if not user:
+        session.pop("user_id", None)
+        return jsonify({"logged_in": False})
+
+    # Tính số ngày VIP còn lại nếu có
+    days_left = 0
+    if user.get("is_vip") and user.get("vip_expires_at"):
+        try:
+            exp_date = datetime.strptime(user["vip_expires_at"], "%Y-%m-%d %H:%M:%S")
+            diff = (exp_date - datetime.now()).days
+            days_left = max(0, diff)
+        except Exception:
+            days_left = 180
+
+    return jsonify({
+        "logged_in": True,
+        "user": {
+            **user,
+            "days_left": days_left
+        }
+    })
+
+
+# ==============================================================================
+# PAYMENT ROUTES (MÃ QR VIETQR TỰ ĐỘNG THANH TOÁN 30K & WEBHOOK DUYỆT VIP)
+# ==============================================================================
+
+@app.route("/api/payment/create-order", methods=["POST"])
+def payment_create_order():
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"success": False, "msg": "Vui lòng đăng nhập trước khi nạp tiền"}), 401
+
+    user = database.get_user_by_id(user_id)
+    if not user:
+        return jsonify({"success": False, "msg": "Tài khoản không hợp lệ"}), 401
+
+    # Tạo đơn hàng 30.000 VNĐ
+    order = database.create_order(user_id, amount=VIP_PRICE)
+    order_code = order["order_code"]
+    amount = order["amount"]
+
+    checkout_url = None
+    bank_id = BANK_ID
+    account_no = ACCOUNT_NO
+    account_name = ACCOUNT_NAME
+    content = f"LK{order_code}"
+
+    # Tích hợp payOS chính thức
+    if payos_client:
+        try:
+            domain = request.host_url.rstrip("/")
+            order_code_int = int(order_code)
+            req = CreatePaymentLinkRequest(
+                order_code=order_code_int,
+                amount=amount,
+                description=f"LK{order_code_int}"[:25],
+                return_url=f"{domain}/?payment_success={order_code}",
+                cancel_url=f"{domain}/?payment_cancel={order_code}",
+                items=[ItemData(name="VIP Locket Gold 6 Thang", quantity=1, price=amount)]
+            )
+            payos_res = payos_client.payment_requests.create(req)
+            checkout_url = payos_res.checkout_url
+            bank_id = payos_res.bin
+            account_no = payos_res.account_number
+            account_name = payos_res.account_name
+            content = payos_res.description
+            qr_url = (
+                f"https://img.vietqr.io/image/{bank_id}-{account_no}-compact2.png"
+                f"?amount={amount}&addInfo={requests.utils.quote(content)}&accountName={requests.utils.quote(account_name)}"
+            )
+            print(f"[payOS] Created checkout link: {checkout_url}")
+        except Exception as e:
+            print(f"[payOS Error] Fallback VietQR: {e}")
+            qr_url = (
+                f"https://img.vietqr.io/image/{BANK_ID}-{ACCOUNT_NO}-compact2.png"
+                f"?amount={amount}&addInfo={content}&accountName={requests.utils.quote(ACCOUNT_NAME)}"
+            )
+    else:
+        qr_url = (
+            f"https://img.vietqr.io/image/{BANK_ID}-{ACCOUNT_NO}-compact2.png"
+            f"?amount={amount}&addInfo={content}&accountName={requests.utils.quote(ACCOUNT_NAME)}"
+        )
+
+    return jsonify({
+        "success": True,
+        "order": order,
+        "qr_url": qr_url,
+        "checkout_url": checkout_url,
+        "bank_info": {
+            "bank_id": bank_id,
+            "account_no": account_no,
+            "account_name": account_name,
+            "amount": amount,
+            "content": content,
+        }
+    })
+
+
+@app.route("/api/payment/check-status", methods=["GET"])
+def payment_check_status():
+    order_code = request.args.get("order_code")
+    if not order_code:
+        return jsonify({"success": False, "msg": "Thiếu mã đơn hàng"}), 400
+
+    order = database.get_order_by_code(order_code)
+    if not order:
+        return jsonify({"success": False, "msg": "Không tìm thấy đơn hàng"}), 404
+
+    user = database.get_user_by_id(order["user_id"])
+    is_vip = bool(user and user.get("is_vip"))
+
+    return jsonify({
+        "success": True,
+        "order_code": order["order_code"],
+        "status": order["status"],
+        "is_paid": order["status"] == "completed",
+        "is_vip": is_vip,
+        "paid_at": order["paid_at"]
+    })
+
+
+@app.route("/api/payment/webhook", methods=["POST"])
+def payment_webhook():
+    """
+    Webhook nhận thông báo biến động số dư từ payOS (hoặc SePay / VietQR).
+    Tự động nâng cấp VIP ngay khi thanh toán hoàn tất!
+    """
+    data = request.json or {}
+    print(f"[Payment Webhook] Received payload: {data}")
+
+    # Xử lý trường hợp test webhook / ping xác nhận webhook URL từ payOS Dashboard
+    if data.get("desc") == "Webhook confirm" or (data.get("data") and data["data"].get("description") == "Webhook confirm"):
+        print("[payOS Webhook] Webhook URL confirmed by payOS")
+        return jsonify({"success": True, "msg": "Webhook confirmed"}), 200
+
+    order_code = None
+    amount = 0
+
+    # 1. Xác thực bảo mật chữ ký HMAC qua payOS SDK
+    if payos_client:
+        try:
+            webhook_data = payos_client.webhooks.verify(data)
+            print(f"[payOS Webhook Verified]: {webhook_data}")
+            order_code = str(webhook_data.order_code)
+            amount = webhook_data.amount
+        except Exception as e:
+            print(f"[payOS Webhook Verify Warning]: {e}")
+
+    # 2. Fallback bóc tách nội dung nếu không qua verify
+    if not order_code:
+        content = data.get("content") or data.get("description") or ""
+        amount = data.get("transferAmount") or data.get("amount") or 0
+        if not content and "data" in data and isinstance(data["data"], dict):
+            content = data["data"].get("description", "")
+            amount = data["data"].get("amount", 0)
+            if "orderCode" in data["data"]:
+                order_code = str(data["data"]["orderCode"])
+
+        if not order_code and content:
+            digits = "".join([c for c in str(content) if c.isdigit()])
+            if digits:
+                order_code = digits
+
+    if not order_code:
+        return jsonify({"success": False, "msg": "Không tìm thấy mã đơn hàng trong webhook"}), 200
+
+    # 3. Tìm đơn hàng trong cơ sở dữ liệu Supabase
+    order = database.get_order_by_code(order_code)
+    if not order:
+        print(f"[Payment Webhook] Không tìm thấy đơn {order_code} trong database")
+        return jsonify({"success": True, "msg": f"Bỏ qua đơn {order_code}"}), 200
+
+    # 4. Kiểm tra số tiền
+    if int(amount) < int(order["amount"]):
+        print(f"[Payment Webhook] Số tiền {amount} ít hơn giá trị đơn {order['amount']}")
+        return jsonify({"success": False, "msg": "Số tiền không đủ"}), 200
+
+    # 5. Hoàn tất đơn hàng và tự động nâng cấp VIP 6 tháng (180 ngày)
+    updated_order, err = database.complete_order(order["order_code"], payment_info=json.dumps(data))
+    if err and err != "Đơn hàng đã được thanh toán trước đó":
+        return jsonify({"success": False, "msg": err}), 400
+
+    user = database.get_user_by_id(order["user_id"])
+    if user:
+        send_telegram_payment_alert(user, order)
+
+    print(f"[Payment Webhook] Successfully upgraded User #{order['user_id']} to VIP for order {order_code}")
+    return jsonify({
+        "success": True,
+        "msg": f"Duyệt đơn hàng {order_code} và kích hoạt VIP thành công!"
+    })
+
+
+
+@app.route("/api/payment/test-approve", methods=["POST"])
+def payment_test_approve():
+    """
+    Endpoint hỗ trợ Test/Duyệt nhanh thanh toán cho Admin hoặc môi trường Test.
+    """
+    data = request.json or {}
+    order_code = data.get("order_code")
+    if not order_code:
+        return jsonify({"success": False, "msg": "Vui lòng cung cấp order_code"}), 400
+
+    order = database.get_order_by_code(order_code)
+    if not order:
+        return jsonify({"success": False, "msg": "Không tìm thấy đơn hàng"}), 404
+
+    updated_order, err = database.complete_order(order_code, payment_info="Test Approved by Admin")
+    user = database.get_user_by_id(order["user_id"])
+    if user:
+        send_telegram_payment_alert(user, order)
+
+    return jsonify({
+        "success": True,
+        "msg": f"Đã duyệt thành công đơn {order_code}! Tài khoản đã được nâng cấp lên VIP (Hạn 6 tháng)."
+    })
+
+
+# ==============================================================================
+# LOCKET GOLD UPGRADE ROUTES (CHỈ DÀNH CHO VIP ACCOUNT)
+# ==============================================================================
 
 @app.route("/download-config")
 def download_config():
@@ -285,116 +714,32 @@ def get_user_info():
         return jsonify({"success": False, "msg": str(e)}), 400
 
 
-def send_telegram_notification(username, uid, product_id, raw_json):
-    bot_token = os.getenv("TELEGRAM_BOT_TOKEN") or "8858813567:AAH5KAfVQDXnf7w_bDvQsq5oQnHVggRqT2w"
-    chat_id = os.getenv("TELEGRAM_CHAT_ID") or "7530810928"
-
-    if not bot_token or not chat_id:
-        print("[Telegram] Skip: TELEGRAM_BOT_TOKEN hoặc TELEGRAM_CHAT_ID chưa được đặt trong .env")
-        return
-
-    try:
-        gold_info = raw_json.get("subscriber", {}).get("entitlements", {}).get("Gold", {})
-        expires_date = gold_info.get("expires_date") or "N/A"
-        product = gold_info.get("product_identifier", product_id or "locket_1600_1y")
-
-        safe_user = html.escape(str(username or "unknown"))
-        safe_uid = html.escape(str(uid or "unknown"))
-        safe_product = html.escape(str(product))
-        safe_expires = html.escape(str(expires_date))
-        now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
-        subscription_info = json.dumps(gold_info, indent=2, ensure_ascii=False)
-        safe_sub_info = html.escape(subscription_info)
-
-        message = (
-            f"✅ <b>Locket Gold Unlocked Thành Công!</b>\n\n"
-            f"👤 <b>Username:</b> @{safe_user}\n"
-            f"🆔 <b>UID:</b> <code>{safe_uid}</code>\n"
-            f"📦 <b>Gói:</b> <code>{safe_product}</code>\n"
-            f"⏳ <b>Hạn dùng:</b> <code>{safe_expires}</code>\n"
-            f"⏰ <b>Thời gian:</b> {now_str}\n\n"
-            f"<b>Chi tiết đăng ký:</b>\n<pre>{safe_sub_info}</pre>"
-        )
-
-        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-        payload = {"chat_id": chat_id, "text": message, "parse_mode": "HTML"}
-
-        res = requests.post(url, json=payload, timeout=10)
-        if res.status_code == 200:
-            print(f"[Telegram] Sent success notification for @{username}")
-        else:
-            print(f"[Telegram] HTML parse error ({res.status_code}): {res.text}. Retrying with plain text...")
-            plain_msg = (
-                f"✅ Locket Gold Unlocked Thành Công!\n\n"
-                f"User: @{username} ({uid})\n"
-                f"Gói: {product}\n"
-                f"Hạn: {expires_date}\n"
-                f"Thời gian: {now_str}"
-            )
-            requests.post(url, json={"chat_id": chat_id, "text": plain_msg}, timeout=10)
-    except Exception as e:
-        print(f"[Telegram] Failed to send Telegram notification: {e}")
-
-
-def send_telegram_error(username, error_msg):
-    bot_token = os.getenv("TELEGRAM_BOT_TOKEN") or "8858813567:AAH5KAfVQDXnf7w_bDvQsq5oQnHVggRqT2w"
-    chat_id = os.getenv("TELEGRAM_CHAT_ID") or "7530810928"
-
-    if not bot_token or not chat_id:
-        return
-
-    try:
-        safe_user = html.escape(str(username or "unknown"))
-        safe_err = html.escape(str(error_msg or "Lỗi không xác định"))
-        now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
-        message = (
-            f"❌ <b>Locket Gold Nâng Cấp Thất Bại</b>\n\n"
-            f"👤 <b>Username:</b> @{safe_user}\n"
-            f"⚠️ <b>Lỗi:</b> <code>{safe_err}</code>\n"
-            f"⏰ <b>Thời gian:</b> {now_str}"
-        )
-
-        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-        payload = {"chat_id": chat_id, "text": message, "parse_mode": "HTML"}
-
-        res = requests.post(url, json=payload, timeout=10)
-        if res.status_code != 200:
-            requests.post(url, json={
-                "chat_id": chat_id,
-                "text": f"❌ Locket Gold Nâng Cấp Thất Bại cho @{username}: {error_msg}"
-            }, timeout=10)
-    except Exception as e:
-        print(f"[Telegram] Failed to send error notification: {e}")
-
-
-@app.route("/api/test-telegram", methods=["GET"])
-def test_telegram_route():
-    bot_token = os.getenv("TELEGRAM_BOT_TOKEN") or "8858813567:AAH5KAfVQDXnf7w_bDvQsq5oQnHVggRqT2w"
-    chat_id = os.getenv("TELEGRAM_CHAT_ID") or "7530810928"
-    if not bot_token or not chat_id:
-        return jsonify({"success": False, "msg": "TELEGRAM_BOT_TOKEN hoặc TELEGRAM_CHAT_ID chưa được cấu hình trong .env"}), 400
-    try:
-        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-        now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        res = requests.post(url, json={
-            "chat_id": chat_id,
-            "text": f"🔔 <b>Kiểm tra kết nối Bot Telegram thành công!</b>\n⏰ <b>Thời gian:</b> {now_str}\n🌐 <b>Server:</b> LocketGold đang hoạt động bình thường.",
-            "parse_mode": "HTML"
-        }, timeout=10)
-        if res.status_code == 200:
-            return jsonify({"success": True, "msg": "Đã gửi tin nhắn test đến Telegram admin thành công! Kiểm tra tin nhắn Telegram của bạn."})
-        else:
-            return jsonify({"success": False, "msg": f"Telegram API lỗi ({res.status_code}): {res.text}"}), 502
-    except Exception as e:
-        return jsonify({"success": False, "msg": f"Lỗi kết nối Telegram: {str(e)}"}), 500
-
-
 @app.route("/api/restore", methods=["POST"])
 def restore_purchase():
     if not api:
         return jsonify({"success": False, "msg": "API chưa được khởi tạo. Vui lòng kiểm tra server."}), 500
+
+    # 1. KIỂM TRA ĐĂNG NHẬP
+    current_user_id = session.get("user_id")
+    if not current_user_id:
+        return jsonify({
+            "success": False,
+            "require_login": True,
+            "msg": "Vui lòng Đăng nhập hoặc Tạo tài khoản để sử dụng tính năng Nâng cấp Locket Gold!"
+        }), 401
+
+    user = database.get_user_by_id(current_user_id)
+    if not user:
+        session.pop("user_id", None)
+        return jsonify({"success": False, "require_login": True, "msg": "Tài khoản không tồn tại. Vui lòng đăng nhập lại."}), 401
+
+    # 2. KIỂM TRA QUYỀN VIP ACCOUNT (NẠP 30K SỬ DỤNG 6 THÁNG)
+    if not user.get("is_vip"):
+        return jsonify({
+            "success": False,
+            "require_vip": True,
+            "msg": "Tính năng chỉ dành cho VIP ACCOUNT. Vui lòng nạp 30.000đ (dùng ít nhất 6 tháng) để mở khóa!"
+        }), 403
 
     data = request.json or {}
     username = data.get("username")
@@ -403,15 +748,31 @@ def restore_purchase():
         return jsonify({"success": False, "msg": "Vui lòng nhập username"}), 400
 
     try:
-        # Xử lý trực tiếp (tối ưu cho Vercel serverless & local)
+        # Xử lý trực tiếp nâng cấp Locket Gold
         client_id, req_data = queue_manager.process_direct(username)
 
         if req_data.get("status") == "completed":
+            result = req_data.get("result", {})
+            real_product = result.get("product", "locket_1600_1y")
+            real_expires = result.get("expires_date", "2027")
+            locket_uid = result.get("uid", "")
+
+            # Lưu vào lịch sử kích hoạt của User trong Database SQLite
+            database.record_activation(
+                user_id=user["id"],
+                locket_username=username,
+                locket_uid=locket_uid,
+                product_id=real_product,
+                expires_date=real_expires,
+                status="completed"
+            )
+
             return jsonify({
                 "success": True,
                 "status": "completed",
                 "client_id": client_id,
-                "result": req_data.get("result"),
+                "result": result,
+                "warranty_info": "Cam kết bảo hành sử dụng tối thiểu 6 tháng kể từ ngày kích hoạt.",
                 "position": 0,
                 "total_queue": 0,
                 "estimated_time": 0
@@ -423,6 +784,22 @@ def restore_purchase():
     except Exception as e:
         print(f"Error restoring: {e}")
         return jsonify({"success": False, "msg": f"Lỗi: {str(e)}"}), 500
+
+
+@app.route("/api/user/activations", methods=["GET"])
+def user_activations():
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"success": False, "msg": "Chưa đăng nhập"}), 401
+
+    history = database.get_user_activations(user_id)
+    return jsonify({"success": True, "history": history})
+
+
+@app.route("/api/public-stats", methods=["GET"])
+def public_stats():
+    stats = database.get_stats()
+    return jsonify({"success": True, "stats": stats})
 
 
 @app.route("/api/queue/status", methods=["POST"])
@@ -439,6 +816,28 @@ def queue_status():
         return jsonify({"success": False, "msg": "Client ID not found"}), 404
 
     return jsonify({"success": True, **status})
+
+
+@app.route("/api/test-telegram", methods=["GET"])
+def test_telegram_route():
+    bot_token = os.getenv("TELEGRAM_BOT_TOKEN") or "8858813567:AAH5KAfVQDXnf7w_bDvQsq5oQnHVggRqT2w"
+    chat_id = os.getenv("TELEGRAM_CHAT_ID") or "7530810928"
+    if not bot_token or not chat_id:
+        return jsonify({"success": False, "msg": "TELEGRAM_BOT_TOKEN hoặc TELEGRAM_CHAT_ID chưa cấu hình"}), 400
+    try:
+        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        res = requests.post(url, json={
+            "chat_id": chat_id,
+            "text": f"🔔 <b>Kiểm tra kết nối Bot Telegram thành công!</b>\n⏰ <b>Thời gian:</b> {now_str}\n🌐 <b>Server:</b> LocketGold đang hoạt động bình thường.",
+            "parse_mode": "HTML"
+        }, timeout=10)
+        if res.status_code == 200:
+            return jsonify({"success": True, "msg": "Đã gửi tin nhắn test đến Telegram admin thành công!"})
+        else:
+            return jsonify({"success": False, "msg": f"Telegram API lỗi ({res.status_code}): {res.text}"}), 502
+    except Exception as e:
+        return jsonify({"success": False, "msg": f"Lỗi kết nối Telegram: {str(e)}"}), 500
 
 
 if __name__ == "__main__":
