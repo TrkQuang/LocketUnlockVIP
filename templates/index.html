@@ -864,6 +864,131 @@
                 font-size: 34px;
             }
         }
+    
+        /* VIP TABS & GUIDE STYLING */
+        .vip-tab-nav {
+            display: flex;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 4px;
+            gap: 6px;
+            margin-bottom: 20px;
+        }
+
+        .vip-tab-btn {
+            flex: 1;
+            padding: 10px 14px;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--muted);
+            background: transparent;
+            border: none;
+            border-radius: 9px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .vip-tab-btn.active {
+            background: linear-gradient(135deg, rgba(245, 189, 41, 0.2) 0%, rgba(245, 189, 41, 0.08) 100%);
+            color: var(--gold);
+            border: 1px solid rgba(245, 189, 41, 0.4);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .vip-tab-btn:hover:not(.active) {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .guide-steps-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 16px;
+            max-height: 480px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .guide-step-item {
+            display: flex;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 14px 16px;
+            text-align: left;
+        }
+
+        .guide-step-badge {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--gold);
+            color: #111;
+            font-weight: 900;
+            font-size: 13.5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .guide-step-content {
+            flex: 1;
+        }
+
+        .guide-step-content h4 {
+            font-size: 13.5px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+
+        .guide-step-content p {
+            font-size: 12.5px;
+            color: #b5c0d0;
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        .guide-note-box {
+            margin-top: 10px;
+            padding: 9px 12px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 8px;
+            color: #34d399;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .dns-install-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            padding: 10px 16px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: #fff !important;
+            text-decoration: none;
+            font-size: 12.5px;
+            font-weight: 700;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+            transition: transform 0.15s ease;
+        }
+
+        .dns-install-btn:hover {
+            transform: translateY(-1px);
+        }
+
     </style>
 </head>
 
@@ -908,8 +1033,8 @@
         <div class="hero-inner">
             <!-- Left Column: Marketing & 6-month Guarantee -->
             <section>
-                <div class="hero-badge">
-                    <span>👑</span> Dịch Vụ Mở Khóa Locket Gold Chính Chủ
+                <div class="hero-badge" style="border-color: rgba(56, 189, 248, 0.35); background: rgba(56, 189, 248, 0.1); color: #38bdf8;">
+                    <span></span> Hỗ Trợ Cho iPhone (iOS) • Không Hỗ Trợ Android
                 </div>
 
                 <h1 class="hero-title">
@@ -934,6 +1059,10 @@
 
                 <!-- Features list -->
                 <div class="feature-grid">
+                    <div class="feature-item" style="border-color: rgba(56, 189, 248, 0.4); background: rgba(56, 189, 248, 0.12);">
+                        <span class="feature-icon" style="color: #38bdf8;"></span>
+                        <span style="color: #38bdf8; font-weight: 800;">Hỗ trợ cho iPhone</span>
+                    </div>
                     <div class="feature-item">
                         <span class="feature-icon">✓</span>
                         <span>Huy hiệu Gold VIP chính chủ</span>
@@ -953,7 +1082,8 @@
                 </div>
 
                 <div class="guarantee-note">
-                    🛡️ <b style="color: var(--green);">Cam kết sử dụng:</b> Sau khi kích hoạt, tài khoản Locket dùng ổn định ít nhất <b>3 tháng</b>. Bạn được quyền kích hoạt lại hoàn toàn miễn phí mãi mãi trên website nếu gặp bất kỳ sự cố nào.
+                     <b style="color: #38bdf8;">Dành riêng cho iPhone:</b> Hệ thống <b>chỉ hỗ trợ cho iPhone (iOS)</b>, không dùng được cho thiết bị Android.<br>
+                    🛡️ <b style="color: var(--green);">Cam kết sử dụng:</b> Sau khi kích hoạt, tài khoản dùng ổn định ít nhất <b>3 tháng</b>. Tài khoản VIP được quyền kích hoạt lại hoàn toàn miễn phí trọn đời trên web!
                 </div>
             </section>
 
@@ -1010,22 +1140,87 @@
                         <div class="vip-days-left" id="vipDaysLeftText">VIP TRỌN ĐỜI (VĨNH VIỄN)</div>
                     </div>
 
-                    <div class="input-group">
-                        <label class="input-label" for="locketUsername">Locket Username / ID của bạn</label>
-                        <div class="input-wrap">
-                            <span class="input-prefix">@</span>
-                            <input class="input-field" type="text" id="locketUsername" placeholder="Nhập username Locket..." autocomplete="off">
+                    <!-- VIP TAB SWITCHER -->
+                    <div class="vip-tab-nav">
+                        <button class="vip-tab-btn active" id="tabBtnActivate" onclick="switchVipTab('activate')">
+                            ⚡ Kích Hoạt Gold
+                        </button>
+                        <button class="vip-tab-btn" id="tabBtnGuide" onclick="switchVipTab('guide')">
+                            📖 Hướng Dẫn & Cài DNS
+                        </button>
+                    </div>
+
+                    <!-- TAB 1: KÍCH HOẠT LOCKET GOLD -->
+                    <div id="tabContentActivate">
+                        <div class="input-group">
+                            <label class="input-label" for="locketUsername">Locket Username / ID của bạn</label>
+                            <div class="input-wrap">
+                                <span class="input-prefix">@</span>
+                                <input class="input-field" type="text" id="locketUsername" placeholder="Nhập username Locket..." autocomplete="off">
+                            </div>
+                        </div>
+
+                        <button class="btn-primary" id="btnUpgradeLocket" onclick="startLocketUpgrade()">
+                            <span id="btnUpgradeText">KÍCH HOẠT LOCKET GOLD</span>
+                            <div class="spinner-mini" id="btnUpgradeSpinner" style="display: none; border-color: #111; border-top-color: transparent;"></div>
+                        </button>
+
+                        <div style="margin-top: 14px; text-align: center; padding: 10px; background: rgba(245, 189, 41, 0.08); border: 1px solid rgba(245, 189, 41, 0.2); border-radius: 8px;">
+                            <span style="font-size: 12.5px; color: #d8dee8;">Chưa biết cách giữ Gold vĩnh viễn? </span>
+                            <a href="javascript:void(0)" onclick="switchVipTab('guide')" style="font-size: 12.5px; color: var(--gold); font-weight: 700; text-decoration: underline;">
+                                Xem hướng dẫn cài DNS ➔
+                            </a>
                         </div>
                     </div>
 
-                    <button class="btn-primary" id="btnUpgradeLocket" onclick="startLocketUpgrade()">
-                        <span id="btnUpgradeText">KÍCH HOẠT LOCKET GOLD</span>
-                        <div class="spinner-mini" id="btnUpgradeSpinner" style="display: none; border-color: #111; border-top-color: transparent;"></div>
-                    </button>
+                    <!-- TAB 2: HƯỚNG DẪN CHI TIẾT & CÀI ĐẶT DNS -->
+                    <div id="tabContentGuide" style="display: none;">
+                        <div class="guide-steps-container">
+                            <div class="guide-step-item">
+                                <div class="guide-step-badge">1</div>
+                                <div class="guide-step-content">
+                                    <h4>Nhập Tên & Nâng Cấp</h4>
+                                    <p>Tại tab <b>Kích Hoạt Gold</b>, nhập chính xác username Locket của bạn rồi nhấn nút <b>KÍCH HOẠT LOCKET GOLD</b>.</p>
+                                </div>
+                            </div>
 
-                    <a class="dns-btn" href="/download-config" download>
-                        <span>⇩</span> TẢI CẤU HÌNH DNS
-                    </a>
+                            <div class="guide-step-item">
+                                <div class="guide-step-badge">2</div>
+                                <div class="guide-step-content">
+                                    <h4>Khởi động lại App Locket</h4>
+                                    <p>Sau khi hệ thống thông báo thành công, hãy <b>vuốt đa nhiệm tắt hẳn ứng dụng Locket</b> rồi mở lại để kiểm tra xem đã lên huy hiệu Gold chưa.</p>
+                                </div>
+                            </div>
+
+                            <div class="guide-step-item" style="border-color: rgba(16, 185, 129, 0.35); background: rgba(16, 185, 129, 0.05);">
+                                <div class="guide-step-badge" style="background: var(--green); color: #fff;">3</div>
+                                <div class="guide-step-content">
+                                    <h4>Tải Cấu Hình DNS <i>(Bắt buộc Safari)</i></h4>
+                                    <p>Nếu tài khoản đã lên Gold, bấm nút bên dưới để tải cấu hình DNS.<br>
+                                    ⚠️ <b>Lưu ý quan trọng:</b> Bắt buộc phải <b>mở trang web bằng Safari trên iPhone</b> mới tải được hồ sơ cấu hình. Chọn <b>"Cho phép"</b> khi có popup yêu cầu tải về.</p>
+                                    <a class="dns-install-btn" href="/download-config" download>
+                                        <span>⇩</span> BẤM ĐÂY ĐỂ TẢI CẤU HÌNH DNS
+                                    </a>
+                                </div>
+                            </div>
+
+                            <div class="guide-step-item">
+                                <div class="guide-step-badge">4</div>
+                                <div class="guide-step-content">
+                                    <h4>Cài Đặt & Giữ Gold Vĩnh Viễn</h4>
+                                    <p>Mở <b>Cài đặt (Settings)</b> trên iPhone → Chọn mục <b>"Đã tải về hồ sơ"</b> ngay trên cùng → Bấm <b>Cài đặt (Install)</b>.<br>
+                                    Tiếp theo vào <b>Cài đặt → Cài đặt chung → Quản lý VPN & Thiết bị → DNS</b> → Tích chọn DNS Locket vừa cài.</p>
+                                    <div class="guide-note-box">
+                                        🛡️ <b>Cài đặt và kích hoạt DNS xong</b> sẽ giúp bạn giữ Gold được mãi mãi mà không bao giờ bị rớt hay mất quyền lợi!
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button class="dns-btn" onclick="switchVipTab('activate')" style="margin-top: 4px;">
+                            ⬅ Quay lại Tab Kích Hoạt
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Card footer status -->
@@ -1614,14 +1809,22 @@
                         icon: 'success',
                         title: 'Kích hoạt Gold thành công!',
                         html: `
-                            <p style="font-size: 15px;">Đã mở khóa toàn bộ tính năng <b>Locket Gold</b> cho tài khoản <b>@${targetUser}</b>!</p>
-                            <div style="margin-top: 14px; padding: 12px; background: rgba(245, 189, 41, 0.12); border: 1px solid rgba(245, 189, 41, 0.3); border-radius: 10px; font-size: 13px; color: var(--gold); text-align: left;">
-                                🛡️ <b>Cam kết sử dụng:</b> Dùng ổn định ít nhất 3 tháng. Tài khoản VIP được kích hoạt lại miễn phí mãi mãi trên web!<br>
-                                ⏳ <b>Hạn dùng:</b> ${exp}
+                            <p style="font-size: 15px;">Đã mở khóa bản quyền <b>Locket Gold</b> cho tài khoản <b>@${targetUser}</b>!</p>
+                            <div style="margin-top: 14px; padding: 14px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 10px; font-size: 12.5px; color: #d1fae5; text-align: left; line-height: 1.6;">
+                                📲 <b>Các bước tiếp theo trên iPhone:</b><br>
+                                1. <b>Tắt hẳn app Locket</b> (vuốt đa nhiệm đóng app) rồi mở lại để kiểm tra.<br>
+                                2. Nếu đã lên Gold, bấm nút bên dưới để <b>cài DNS</b> giữ Gold mãi mãi (bắt buộc dùng Safari).<br>
+                                🛡️ <i>Cam kết dùng ổn định ít nhất 3 tháng & Kích hoạt lại miễn phí trọn đời!</i>
                             </div>
                         `,
-                        confirmButtonText: 'Tuyệt vời',
+                        confirmButtonText: '⚡ Xem Hướng Dẫn & Cài DNS',
+                        showCancelButton: true,
+                        cancelButtonText: 'Đóng',
                         ...swalDark
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            switchVipTab('guide');
+                        }
                     });
                 } else {
                     Swal.fire({
