@@ -1182,6 +1182,19 @@
                     return;
                 }
 
+                if (data.status === 'completed' || (data.success && data.result)) {
+                    updateLocalActivityStatus(currentClientId, 'completed');
+                    const expDate = data.result?.expires_date || '';
+                    const expHtml = expDate ? `<div style="margin-top:14px;padding:10px 14px;background:rgba(245,189,41,0.1);border:1px solid rgba(245,189,41,0.3);border-radius:8px;font-size:13px;color:var(--gold);line-height:1.5;">⏳ <b>Hạn sử dụng (Thật):</b><br>${escapeHtml(expDate)}</div>` : '';
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Thành công!',
+                        html: `Đã kích hoạt Locket Gold cho <b>@${escapeHtml(user)}</b> thành công!${expHtml}`,
+                        ...swalConfig
+                    });
+                    return;
+                }
+
                 const serverClientId = data?.client_id || data?.clientId || currentClientId;
                 const pollStart = Date.now();
                 showQueue(serverClientId, user, currentClientId, pollStart);
@@ -1242,7 +1255,14 @@
                     if (data.status === 'completed' || data.status === 'done' || data.status === 'success') {
                         updateLocalActivityStatus(localClientId, 'completed');
                         clearInterval(countdown);
-                        Swal.fire({ icon: 'success', title: 'Thành công', text: 'Đã xử lý xong yêu cầu.', ...swalConfig });
+                        const expDate = data.result?.expires_date || '';
+                        const expHtml = expDate ? `<div style="margin-top:14px;padding:10px 14px;background:rgba(245,189,41,0.1);border:1px solid rgba(245,189,41,0.3);border-radius:8px;font-size:13px;color:var(--gold);line-height:1.5;">⏳ <b>Hạn sử dụng (Thật):</b><br>${escapeHtml(expDate)}</div>` : '';
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Thành công!',
+                            html: `Đã kích hoạt Locket Gold cho <b>@${escapeHtml(user)}</b> thành công!${expHtml}`,
+                            ...swalConfig
+                        });
                         return;
                     }
 

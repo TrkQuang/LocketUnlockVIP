@@ -59,9 +59,17 @@ class LocketAPI:
         """
 
         if not username:
-            raise ValueError("Username is required")
+            raise ValueError("Vui lòng nhập username")
 
-        username = username.strip().lstrip("@")
+        username = username.strip()
+        for prefix in ["https://locket.cam/", "http://locket.cam/", "locket.cam/", "https://locket.camera/invites/", "http://locket.camera/invites/"]:
+            if prefix in username:
+                username = username.split(prefix)[-1]
+        username = username.split("?")[0].split("/")[0].lstrip("@").strip()
+
+        if not username:
+            raise ValueError("Username không hợp lệ")
+
         url = f"https://locket.cam/{username}"
 
         headers = {
@@ -74,8 +82,11 @@ class LocketAPI:
                 url,
                 headers=headers,
                 allow_redirects=True,
-                timeout=10
+                timeout=12
             )
+
+            if response.status_code == 404:
+                raise Exception(f"Không tìm thấy tài khoản '@{username}' trên Locket.")
 
             response.raise_for_status()
 

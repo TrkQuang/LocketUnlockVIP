@@ -1,18 +1,25 @@
-from flask import Flask, render_template, request, jsonify, send_from_directory
-from api import LocketAPI
+import os
+import sys
 import json
 import time
+import html
 import requests
 import queue
 import threading
 import uuid
 from datetime import datetime
 import dotenv
-import os
+from flask import Flask, render_template, request, jsonify, send_from_directory
+from api import LocketAPI
 
-app = Flask(__name__)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+dotenv.load_dotenv(os.path.join(BASE_DIR, ".env"))
 
-dotenv.load_dotenv()
+app = Flask(
+    __name__,
+    template_folder=os.path.join(BASE_DIR, "templates"),
+    static_folder=os.path.join(BASE_DIR, "static"),
+)
 
 # Initialize API (Không cần Auth nữa)
 subscription_ids = [
@@ -36,8 +43,8 @@ class QueueManager:
     def __init__(self):
         self.queue = queue.Queue()
         self.lock = threading.Lock()
-        self.client_requests = {}  
-        self.processing_times = []  
+        self.client_requests = {}
+        self.processing_times = []
         self.current_processing = None
         self.worker_thread = threading.Thread(target=self._process_queue, daemon=True)
         self.worker_thread.start()
@@ -61,6 +68,24 @@ class QueueManager:
         self.queue.put(client_id)
         print(f"Added {username} to queue with client_id: {client_id}")
         return client_id
+
+    def process_direct(self, username):
+        """Xử lý trực tiếp (tối ưu cho Vercel Serverless Function & phản hồi tức thì)"""
+        client_id = str(uuid.uuid4())
+        with self.lock:
+            self.client_requests[client_id] = {
+                "username": username,
+                "status": "processing",
+                "result": None,
+                "error": None,
+                "added_at": datetime.now(),
+                "started_at": datetime.now(),
+                "completed_at": None,
+            }
+        self._process_request(client_id)
+        with self.lock:
+            req = self.client_requests.get(client_id, {})
+        return client_id, req
 
     def get_status(self, client_id):
         with self.lock:
@@ -87,7 +112,7 @@ class QueueManager:
 
     def _get_position(self, client_id):
         if self.current_processing == client_id:
-            return 0  
+            return 0
 
         queue_list = list(self.queue.queue)
         if client_id in queue_list:
@@ -102,7 +127,7 @@ class QueueManager:
     def _estimate_wait_time(self, position):
         if position == 0:
             return 0
-        avg_time = 5  
+        avg_time = 5
         if self.processing_times:
             avg_time = sum(self.processing_times[-10:]) / len(self.processing_times[-10:])
         return int(position * avg_time)
@@ -145,6 +170,7 @@ class QueueManager:
                     self.current_processing = None
 
     def _process_request(self, client_id):
+        username = None
         try:
             with self.lock:
                 username = self.client_requests[client_id]["username"]
@@ -155,56 +181,34 @@ class QueueManager:
             account_info = api.getUserByUsername(username)
 
             if not account_info or "result" not in account_info:
-                raise Exception("User not found or API error")
+                raise Exception(f"Không tìm thấy thông tin của @{username} trên Locket.")
 
             user_data = account_info.get("result", {}).get("data")
             if not user_data:
-                raise Exception("User data not found")
+                raise Exception(f"Không tìm thấy dữ liệu của @{username}.")
 
             uid_target = user_data.get("uid")
             if not uid_target:
-                raise Exception("UID not found for user")
+                raise Exception(f"Không tìm thấy UID của @{username}.")
 
-            # 2. Restore purchase trực tiếp
+            # 2. Restore purchase trực tiếp từ RevenueCat
             restore_result = api.restorePurchase(uid_target)
 
-            # Đánh chặn ghi đè (override) 2099
-            try:
-                if isinstance(restore_result, dict):
-                    subscriber = restore_result.get('subscriber')
-                    if isinstance(subscriber, dict):
-                        entitlements = subscriber.get('entitlements')
-                        if isinstance(entitlements, dict):
-                            gold = entitlements.get('Gold')
-                            if isinstance(gold, dict):
-                                gold['expires_date'] = '2099-12-31T23:59:59Z'
-                                entitlements['Gold'] = gold
-
-                        subscriptions = subscriber.get('subscriptions')
-                        if isinstance(subscriptions, dict):
-                            for k, v in subscriptions.items():
-                                if isinstance(v, dict):
-                                    v['expires_date'] = '2099-12-31T23:59:59Z'
-                                    subscriptions[k] = v
-
-                        if isinstance(entitlements, dict):
-                            subscriber['entitlements'] = entitlements
-                        if isinstance(subscriptions, dict):
-                            subscriber['subscriptions'] = subscriptions
-                        restore_result['subscriber'] = subscriber
-            except Exception:
-                pass
-
-            # Check entitlement
-            entitlements = restore_result.get("subscriber", {}).get("entitlements", {})
+            # Check entitlement thật từ RevenueCat (dữ liệu thật, không ghi đè fake)
+            subscriber = restore_result.get("subscriber", {})
+            entitlements = subscriber.get("entitlements", {})
             gold_entitlement = entitlements.get("Gold", {})
 
             # Nếu mua thành công
-            if gold_entitlement: 
+            if gold_entitlement:
+                real_product_id = gold_entitlement.get("product_identifier", "locket_1600_1y")
+                real_expires_date = gold_entitlement.get("expires_date") or "N/A"
+                real_purchase_date = gold_entitlement.get("purchase_date") or "N/A"
+
                 send_telegram_notification(
                     username,
                     uid_target,
-                    gold_entitlement.get("product_identifier", "locket_199_1m"),
+                    real_product_id,
                     restore_result,
                 )
 
@@ -212,16 +216,21 @@ class QueueManager:
                     self.client_requests[client_id]["status"] = "completed"
                     self.client_requests[client_id]["result"] = {
                         "success": True,
-                        "msg": f"Purchase for {username} successfully!",
+                        "msg": f"Nâng cấp Gold cho @{username} thành công!",
+                        "product": real_product_id,
+                        "expires_date": real_expires_date,
+                        "purchase_date": real_purchase_date,
                     }
             else:
-                raise Exception(f"Restore purchase failed. Gold entitlement not found for {username}.")
+                raise Exception(f"Kích hoạt Gold thất bại. Không tìm thấy gói Gold cho @{username}.")
 
         except Exception as e:
-            print(f"Error processing request for {client_id}: {e}")
+            err_msg = str(e)
+            print(f"Error processing request for {client_id}: {err_msg}")
+            send_telegram_error(username, err_msg)
             with self.lock:
                 self.client_requests[client_id]["status"] = "error"
-                self.client_requests[client_id]["error"] = str(e)
+                self.client_requests[client_id]["error"] = err_msg
 
 
 queue_manager = QueueManager()
@@ -242,24 +251,24 @@ def index():
 @app.route("/api/get-user-info", methods=["POST"])
 def get_user_info():
     if not api:
-        return jsonify({"success": False, "msg": "API not initialized. Check server logs."}), 500
+        return jsonify({"success": False, "msg": "API chưa được khởi tạo. Vui lòng kiểm tra server."}), 500
 
-    data = request.json
+    data = request.json or {}
     username = data.get("username")
 
     if not username:
-        return jsonify({"success": False, "msg": "Username is required"}), 400
+        return jsonify({"success": False, "msg": "Vui lòng nhập username"}), 400
 
     try:
         print(f"Looking up user: {username}")
         account_info = api.getUserByUsername(username)
 
         if not account_info or "result" not in account_info:
-            return jsonify({"success": False, "msg": "User not found or API error"}), 404
+            return jsonify({"success": False, "msg": f"Không tìm thấy người dùng '@{username}'."}), 404
 
         user_data = account_info.get("result", {}).get("data")
-        if not user_data:
-            return jsonify({"success": False, "msg": "User data not found"}), 404
+        if not user_data or not user_data.get("uid"):
+            return jsonify({"success": False, "msg": f"Không tìm thấy dữ liệu hoặc UID của '@{username}'."}), 404
 
         user_info = {
             "uid": user_data.get("uid"),
@@ -273,64 +282,152 @@ def get_user_info():
 
     except Exception as e:
         print(f"Error in get user info: {e}")
-        return jsonify({"success": False, "msg": f"An error occurred: {str(e)}"}), 500
+        return jsonify({"success": False, "msg": str(e)}), 400
 
 
 def send_telegram_notification(username, uid, product_id, raw_json):
-    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
-    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+    bot_token = os.getenv("TELEGRAM_BOT_TOKEN") or "8858813567:AAH5KAfVQDXnf7w_bDvQsq5oQnHVggRqT2w"
+    chat_id = os.getenv("TELEGRAM_CHAT_ID") or "7530810928"
 
     if not bot_token or not chat_id:
-        print("Telegram notification skipped: Token or Chat ID not set.")
+        print("[Telegram] Skip: TELEGRAM_BOT_TOKEN hoặc TELEGRAM_CHAT_ID chưa được đặt trong .env")
         return
-        
-    subscription_info = json.dumps(
-        raw_json.get("subscriber", {}).get("entitlements", {}).get("Gold", {}), indent=2
-    )
-
-    message = f"✅ <b>Locket Gold Unlocked! (Web Version)</b>\n\n👤 <b>User:</b> {username} ({uid})\n⏰ <b>Time:</b> {time.strftime('%Y-%m-%d %H:%M:%S')}\n\n<b>Subscription Info:</b>\n<pre>{subscription_info}</pre>"
-    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-    payload = {"chat_id": chat_id, "text": message, "parse_mode": "HTML"}
 
     try:
-        requests.post(url, json=payload)
+        gold_info = raw_json.get("subscriber", {}).get("entitlements", {}).get("Gold", {})
+        expires_date = gold_info.get("expires_date") or "N/A"
+        product = gold_info.get("product_identifier", product_id or "locket_1600_1y")
+
+        safe_user = html.escape(str(username or "unknown"))
+        safe_uid = html.escape(str(uid or "unknown"))
+        safe_product = html.escape(str(product))
+        safe_expires = html.escape(str(expires_date))
+        now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        subscription_info = json.dumps(gold_info, indent=2, ensure_ascii=False)
+        safe_sub_info = html.escape(subscription_info)
+
+        message = (
+            f"✅ <b>Locket Gold Unlocked Thành Công!</b>\n\n"
+            f"👤 <b>Username:</b> @{safe_user}\n"
+            f"🆔 <b>UID:</b> <code>{safe_uid}</code>\n"
+            f"📦 <b>Gói:</b> <code>{safe_product}</code>\n"
+            f"⏳ <b>Hạn dùng:</b> <code>{safe_expires}</code>\n"
+            f"⏰ <b>Thời gian:</b> {now_str}\n\n"
+            f"<b>Chi tiết đăng ký:</b>\n<pre>{safe_sub_info}</pre>"
+        )
+
+        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        payload = {"chat_id": chat_id, "text": message, "parse_mode": "HTML"}
+
+        res = requests.post(url, json=payload, timeout=10)
+        if res.status_code == 200:
+            print(f"[Telegram] Sent success notification for @{username}")
+        else:
+            print(f"[Telegram] HTML parse error ({res.status_code}): {res.text}. Retrying with plain text...")
+            plain_msg = (
+                f"✅ Locket Gold Unlocked Thành Công!\n\n"
+                f"User: @{username} ({uid})\n"
+                f"Gói: {product}\n"
+                f"Hạn: {expires_date}\n"
+                f"Thời gian: {now_str}"
+            )
+            requests.post(url, json={"chat_id": chat_id, "text": plain_msg}, timeout=10)
     except Exception as e:
-        print(f"Failed to send Telegram notification: {e}")
+        print(f"[Telegram] Failed to send Telegram notification: {e}")
+
+
+def send_telegram_error(username, error_msg):
+    bot_token = os.getenv("TELEGRAM_BOT_TOKEN") or "8858813567:AAH5KAfVQDXnf7w_bDvQsq5oQnHVggRqT2w"
+    chat_id = os.getenv("TELEGRAM_CHAT_ID") or "7530810928"
+
+    if not bot_token or not chat_id:
+        return
+
+    try:
+        safe_user = html.escape(str(username or "unknown"))
+        safe_err = html.escape(str(error_msg or "Lỗi không xác định"))
+        now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        message = (
+            f"❌ <b>Locket Gold Nâng Cấp Thất Bại</b>\n\n"
+            f"👤 <b>Username:</b> @{safe_user}\n"
+            f"⚠️ <b>Lỗi:</b> <code>{safe_err}</code>\n"
+            f"⏰ <b>Thời gian:</b> {now_str}"
+        )
+
+        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        payload = {"chat_id": chat_id, "text": message, "parse_mode": "HTML"}
+
+        res = requests.post(url, json=payload, timeout=10)
+        if res.status_code != 200:
+            requests.post(url, json={
+                "chat_id": chat_id,
+                "text": f"❌ Locket Gold Nâng Cấp Thất Bại cho @{username}: {error_msg}"
+            }, timeout=10)
+    except Exception as e:
+        print(f"[Telegram] Failed to send error notification: {e}")
+
+
+@app.route("/api/test-telegram", methods=["GET"])
+def test_telegram_route():
+    bot_token = os.getenv("TELEGRAM_BOT_TOKEN") or "8858813567:AAH5KAfVQDXnf7w_bDvQsq5oQnHVggRqT2w"
+    chat_id = os.getenv("TELEGRAM_CHAT_ID") or "7530810928"
+    if not bot_token or not chat_id:
+        return jsonify({"success": False, "msg": "TELEGRAM_BOT_TOKEN hoặc TELEGRAM_CHAT_ID chưa được cấu hình trong .env"}), 400
+    try:
+        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        res = requests.post(url, json={
+            "chat_id": chat_id,
+            "text": f"🔔 <b>Kiểm tra kết nối Bot Telegram thành công!</b>\n⏰ <b>Thời gian:</b> {now_str}\n🌐 <b>Server:</b> LocketGold đang hoạt động bình thường.",
+            "parse_mode": "HTML"
+        }, timeout=10)
+        if res.status_code == 200:
+            return jsonify({"success": True, "msg": "Đã gửi tin nhắn test đến Telegram admin thành công! Kiểm tra tin nhắn Telegram của bạn."})
+        else:
+            return jsonify({"success": False, "msg": f"Telegram API lỗi ({res.status_code}): {res.text}"}), 502
+    except Exception as e:
+        return jsonify({"success": False, "msg": f"Lỗi kết nối Telegram: {str(e)}"}), 500
 
 
 @app.route("/api/restore", methods=["POST"])
 def restore_purchase():
     if not api:
-        return jsonify({"success": False, "msg": "API not initialized. Check server logs."}), 500
+        return jsonify({"success": False, "msg": "API chưa được khởi tạo. Vui lòng kiểm tra server."}), 500
 
-    data = request.json
+    data = request.json or {}
     username = data.get("username")
 
     if not username:
-        return jsonify({"success": False, "msg": "Username is required"}), 400
+        return jsonify({"success": False, "msg": "Vui lòng nhập username"}), 400
 
     try:
-        client_id = queue_manager.add_to_queue(username)
-        status = queue_manager.get_status(client_id)
+        # Xử lý trực tiếp (tối ưu cho Vercel serverless & local)
+        client_id, req_data = queue_manager.process_direct(username)
 
-        return jsonify(
-            {
+        if req_data.get("status") == "completed":
+            return jsonify({
                 "success": True,
+                "status": "completed",
                 "client_id": client_id,
-                "position": status["position"],
-                "total_queue": status["total_queue"],
-                "estimated_time": status["estimated_time"],
-            }
-        )
+                "result": req_data.get("result"),
+                "position": 0,
+                "total_queue": 0,
+                "estimated_time": 0
+            })
+        else:
+            err = req_data.get("error") or "Không thể kích hoạt Gold. Vui lòng thử lại sau."
+            return jsonify({"success": False, "msg": err}), 400
 
     except Exception as e:
-        print(f"Error adding to queue: {e}")
-        return jsonify({"success": False, "msg": f"An error occurred: {str(e)}"}), 500
+        print(f"Error restoring: {e}")
+        return jsonify({"success": False, "msg": f"Lỗi: {str(e)}"}), 500
 
 
 @app.route("/api/queue/status", methods=["POST"])
 def queue_status():
-    data = request.json
+    data = request.json or {}
     client_id = data.get("client_id")
 
     if not client_id:
@@ -341,33 +438,10 @@ def queue_status():
     if status is None:
         return jsonify({"success": False, "msg": "Client ID not found"}), 404
 
-    # Đánh chặn Data gửi về UI client
-    try:
-        target = None
-        if isinstance(status, dict):
-            if 'subscriber' in status:
-                target = status
-            elif isinstance(status.get('result'), dict) and 'subscriber' in status.get('result'):
-                target = status['result']
-        if isinstance(target, dict) and 'subscriber' in target:
-            sub = target['subscriber']
-            if 'entitlements' not in sub or not isinstance(sub.get('entitlements'), dict):
-                sub['entitlements'] = {}
-            if 'Gold' not in sub['entitlements'] or not isinstance(sub['entitlements'].get('Gold'), dict):
-                sub['entitlements']['Gold'] = {}
-
-            sub['entitlements']['Gold']['expires_date'] = '2099-12-31T23:59:59Z'
-            sub['entitlements']['Gold']['product_identifier'] = 'locket_3600_1y'
-
-            if 'subscriptions' in sub and isinstance(sub.get('subscriptions'), dict):
-                for pkg in sub['subscriptions']:
-                    if isinstance(sub['subscriptions'][pkg], dict):
-                        sub['subscriptions'][pkg]['expires_date'] = '2099-12-31T23:59:59Z'
-    except Exception as e:
-        print("Lỗi đánh chặn data:", e)
-
     return jsonify({"success": True, **status})
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    port = int(os.getenv("PORT", 5000))
+    print(f"Server is running on http://127.0.0.1:{port}")
+    app.run(host="0.0.0.0", port=port, debug=True, use_reloader=False)
