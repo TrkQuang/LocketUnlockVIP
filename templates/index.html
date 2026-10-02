@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LocketGold — Nâng Cấp Locket Gold Tự Động (Bảo Hành 6 Tháng)</title>
+    <title>LocketGold — Nâng Cấp Locket Gold Bản Quyền (Kích Hoạt Trọn Đời)</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -291,7 +291,7 @@
         }
 
         .warranty-box::before {
-            content: "180 DAYS";
+            content: "LIFETIME VIP";
             position: absolute;
             right: -10px;
             bottom: -15px;
@@ -319,9 +319,9 @@
 
         .feature-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
             gap: 12px;
-            margin-bottom: 24px;
+            margin-bottom: 16px;
         }
 
         .feature-item {
@@ -332,9 +332,21 @@
             border: 1px solid var(--line);
             padding: 12px 16px;
             border-radius: 12px;
-            font-size: 13.5px;
+            font-size: 13px;
             font-weight: 700;
             color: #e5ebf5;
+            white-space: nowrap;
+        }
+
+        .guarantee-note {
+            background: rgba(16, 185, 129, 0.08);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            border-radius: 12px;
+            padding: 14px 18px;
+            font-size: 13px;
+            color: #d1d5db;
+            line-height: 1.6;
+            margin-bottom: 24px;
         }
 
         .feature-icon {
@@ -870,13 +882,13 @@
             <div class="topbar-actions">
                 <div class="nav-badge-guarantee">
                     <span>🛡️</span>
-                    <span>Bảo hành 6 tháng</span>
+                    <span>👑 VIP Trọn Đời</span>
                 </div>
 
                 <!-- Guest State -->
                 <div id="navGuestBox" style="display: flex; gap: 8px;">
                     <button class="btn-auth btn-auth-login" onclick="openAuthModal('login')">Đăng nhập</button>
-                    <button class="btn-auth btn-auth-register" onclick="openAuthModal('register')">Đăng ký (30k VIP)</button>
+                    <button class="btn-auth btn-auth-register" onclick="openAuthModal('register')">Đăng ký (30k Trọn Đời)</button>
                 </div>
 
                 <!-- Logged In State -->
@@ -901,22 +913,22 @@
                 </div>
 
                 <h1 class="hero-title">
-                    Kích hoạt tài khoản<br>
-                    <span class="gold-text">Locket Gold</span> VIP 6 Tháng
+                    Nâng cấp tài khoản<br>
+                    <span class="gold-text">Locket Gold</span> Bản Quyền
                 </h1>
 
                 <p class="hero-desc">
-                    Hệ thống nâng cấp bản quyền tự động 100% qua RevenueCat. Mở khóa toàn bộ đặc quyền Gold trực tiếp trên tài khoản Locket của bạn.
+                    Hệ thống nâng cấp bản quyền chính thức tự động 100%. Nâng cấp tài khoản VIP 1 lần duy nhất để sở hữu quyền kích hoạt Locket Gold <b>vĩnh viễn không giới hạn</b> trên website!
                 </p>
 
-                <!-- 6 MONTH WARRANTY BANNER -->
+                <!-- LIFETIME WARRANTY & PRIVILEGE BANNER -->
                 <div class="warranty-box">
                     <div class="warranty-header">
-                        <span>🛡️</span>
-                        <span>CAM KẾT BẢO HÀNH & SỬ DỤNG TỐI THIỂU 6 THÁNG</span>
+                        <span>👑</span>
+                        <span>ĐẶC QUYỀN VIP — KÍCH HOẠT VĨNH VIỄN TRÊN WEBSITE</span>
                     </div>
                     <p class="warranty-desc">
-                        Gói kích hoạt trị giá <b>30.000 VNĐ</b> được cam kết duy trì sử dụng ổn định <b>ít nhất 180 ngày (6 tháng)</b>. Hệ thống lưu trữ lịch sử kích hoạt và hỗ trợ kích hoạt lại hoàn toàn miễn phí nếu gặp sự cố.
+                        Chỉ với <b>30.000 VNĐ</b> (thanh toán 1 lần duy nhất), bạn sẽ mở khóa quyền kích hoạt Locket Gold <b>vĩnh viễn trọn đời</b> trên hệ thống web. Thoải mái kích hoạt hoặc kích hoạt lại bất kỳ lúc nào mà không phát sinh thêm chi phí!
                     </p>
                 </div>
 
@@ -924,7 +936,7 @@
                 <div class="feature-grid">
                     <div class="feature-item">
                         <span class="feature-icon">✓</span>
-                        <span>Huy hiệu Gold VIP lấp lánh</span>
+                        <span>Huy hiệu Gold VIP chính chủ</span>
                     </div>
                     <div class="feature-item">
                         <span class="feature-icon">✓</span>
@@ -939,16 +951,20 @@
                         <span>Kích hoạt tự động sau 10-30s</span>
                     </div>
                 </div>
+
+                <div class="guarantee-note">
+                    🛡️ <b style="color: var(--green);">Cam kết sử dụng:</b> Sau khi kích hoạt, tài khoản Locket dùng ổn định ít nhất <b>3 tháng</b>. Bạn được quyền kích hoạt lại hoàn toàn miễn phí mãi mãi trên website nếu gặp bất kỳ sự cố nào.
+                </div>
             </section>
 
             <!-- Right Column: Interactive Upgrade Card -->
             <aside class="action-card">
                 <div class="card-header-badge">
                     <div class="price-tag">
-                        <strong>30.000đ</strong> / 6 tháng <s>399.000đ</s>
+                        <strong>30.000đ</strong> <span style="font-size: 13px; color: var(--gold); font-weight: 600;">/ Mua 1 Lần Dùng Mãi Mãi</span>
                     </div>
-                    <div style="font-size: 11px; color: var(--gold); font-weight: 700;">
-                        TIẾT KIỆM 92%
+                    <div style="font-size: 11px; background: rgba(245, 189, 41, 0.15); color: var(--gold); padding: 4px 10px; border-radius: 20px; font-weight: 700; border: 1px solid rgba(245, 189, 41, 0.3);">
+                        ✨ TRỌN ĐỜI
                     </div>
                 </div>
 
@@ -958,7 +974,7 @@
                         <div class="guest-icon">🔒</div>
                         <h3 class="guest-title">Đăng Nhập Để Kích Hoạt</h3>
                         <p class="guest-text">
-                            Bạn cần đăng ký hoặc đăng nhập tài khoản trước khi nạp 30.000đ để kích hoạt gói Locket Gold VIP 6 tháng.
+                            Bạn cần đăng ký hoặc đăng nhập tài khoản trước khi nạp 30.000đ để kích hoạt gói VIP vĩnh viễn trên web.
                         </p>
                         <button class="btn-primary" onclick="openAuthModal('register')">
                             TẠO TÀI KHOẢN & MUA VIP (30K)
@@ -974,7 +990,7 @@
                     <div class="non-vip-box">
                         <div class="locked-notice">
                             <strong>⚡ Tài khoản chưa nâng cấp VIP</strong>
-                            Bạn đang sử dụng tài khoản Miễn phí. Hãy nạp <b>30.000 VNĐ</b> qua mã QR để được duyệt tự động lên <b>VIP ACCOUNT (Hạn 6 tháng)</b> và sử dụng công cụ kích hoạt Gold!
+                            Bạn đang sử dụng tài khoản Miễn phí. Hãy nạp <b>30.000 VNĐ</b> (1 lần duy nhất) để được nâng cấp lên <b>VIP TRỌN ĐỜI</b> và mở khóa tính năng kích hoạt Locket Gold mãi mãi trên web!
                         </div>
 
                         <button class="btn-upgrade-vip" onclick="openPaymentModal()">
@@ -991,7 +1007,7 @@
                 <div class="state-box" id="stateVip">
                     <div class="vip-active-banner">
                         <div class="vip-active-text">👑 VIP ACCOUNT ĐÃ KÍCH HOẠT</div>
-                        <div class="vip-days-left" id="vipDaysLeftText">Hạn: 180 ngày</div>
+                        <div class="vip-days-left" id="vipDaysLeftText">VIP TRỌN ĐỜI (VĨNH VIỄN)</div>
                     </div>
 
                     <div class="input-group">
@@ -1038,7 +1054,7 @@
             <div class="step-card">
                 <div class="step-num">3</div>
                 <h3 class="step-title">Mở Khóa Locket Gold</h3>
-                <p class="step-desc">Nhập ID tài khoản Locket của bạn, bấm kích hoạt và nhận gói Gold bản quyền dùng ít nhất 6 tháng!</p>
+                <p class="step-desc">Nhập ID tài khoản Locket của bạn, bấm kích hoạt và nhận gói Gold bản quyền dùng ổn định ít nhất 3 tháng & kích hoạt lại vĩnh viễn trên web!</p>
             </div>
         </div>
     </section>
@@ -1150,7 +1166,7 @@
             </div>
 
             <p style="font-size: 11.5px; color: var(--muted); text-align: center; margin-bottom: 14px; line-height: 1.5;">
-                ⚠️ <i>Lưu ý quan trọng: Vui lòng nhập chính xác <b>Nội dung CK</b> để hệ thống nhận diện và tự động nâng cấp VIP 6 tháng tức thì.</i>
+                ⚠️ <i>Lưu ý quan trọng: Vui lòng nhập chính xác <b>Nội dung CK</b> để hệ thống nhận diện và tự động kích hoạt VIP Vĩnh Viễn tức thì.</i>
             </p>
 
             <a id="payosCheckoutBtn" href="#" target="_blank" class="dns-btn" style="display: none; margin-bottom: 10px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none; color: #ffffff !important; text-align: center; text-decoration: none; font-weight: 700; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.35); text-transform: uppercase;">
@@ -1161,16 +1177,13 @@
                 ✓ TÔI ĐÃ CHUYỂN KHOẢN (KIỂM TRA NGAY)
             </button>
 
-            <!-- Test button for local/demo test -->
-            <button class="dns-btn" onclick="triggerTestApprove()" style="margin-top: 8px; font-size: 11px; opacity: 0.7;">
-                🛠️ Duyệt thanh toán thử nghiệm (Test Demo)
-            </button>
+
         </div>
     </div>
 
     <!-- ===== FOOTER ===== -->
     <footer class="site-footer">
-        Designed by Tran Quang — K24 IT SGU • Cam kết bản quyền Locket Gold 6 tháng
+        Designed by Tran Quang — K24 IT SGU • Cam kết dùng ổn định ít nhất 3 tháng & Kích hoạt vĩnh viễn trên web
     </footer>
 
     <!-- SCRIPTS -->
@@ -1243,7 +1256,7 @@
                     badgeEl.className = 'user-pill-badge badge-vip';
                     stateVip.classList.add('active');
                     const days = currentUser.days_left !== undefined ? currentUser.days_left : 180;
-                    document.getElementById('vipDaysLeftText').textContent = `Hạn: ${days} ngày (Cam kết 6 tháng)`;
+                    document.getElementById('vipDaysLeftText').textContent = 'VIP TRỌN ĐỜI (VĨNH VIỄN)';
                 } else {
                     badgeEl.textContent = 'THƯỜNG';
                     badgeEl.className = 'user-pill-badge badge-free';
@@ -1347,7 +1360,7 @@
                     Swal.fire({
                         icon: 'success',
                         title: 'Tạo tài khoản thành công!',
-                        text: 'Bạn đã đăng nhập. Hãy nạp 30.000đ để kích hoạt gói VIP 6 tháng!',
+                        text: 'Bạn đã đăng nhập. Hãy nạp 30.000đ (1 lần duy nhất) để kích hoạt gói VIP trọn đời!',
                         confirmButtonText: 'NẠP 30K QUA QR NGAY',
                         ...swalDark
                     }).then(r => {
@@ -1481,23 +1494,7 @@
         }
 
         // Test approve for admin / demo
-        async function triggerTestApprove() {
-            if (!activeOrderCode) return;
-            try {
-                const res = await fetch('/api/payment/test-approve', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ order_code: activeOrderCode })
-                });
-                const data = await res.json();
-                if (res.ok && data.success) {
-                    stopPaymentPolling();
-                    onPaymentSuccess();
-                }
-            } catch (e) {
-                console.error("Test approve error:", e);
-            }
-        }
+        
 
         function onPaymentSuccess() {
             closePaymentModal();
@@ -1515,8 +1512,8 @@
                 title: 'NÂNG CẤP VIP THÀNH CÔNG! 🎉',
                 html: `
                     <div style="font-size: 14.5px; line-height: 1.6; text-align: left; background: rgba(245, 189, 41, 0.1); border: 1px solid rgba(245, 189, 41, 0.3); border-radius: 12px; padding: 14px 18px; margin-top: 10px;">
-                        💎 <b>Gói:</b> VIP ACCOUNT (Hạn 180 ngày / 6 tháng)<br>
-                        🛡️ <b>Cam kết bảo hành:</b> Tối thiểu 6 tháng kể từ hôm nay.<br>
+                        💎 <b>Gói:</b> VIP TRỌN ĐỜI (Kích hoạt vĩnh viễn trên web)<br>
+                        🛡️ <b>Cam kết chất lượng:</b> Dùng ổn định ít nhất 3 tháng & Hỗ trợ kích hoạt lại trọn đời.<br>
                         ✨ Bạn hiện có thể nhập Username Locket và tiến hành mở khóa Gold ngay lập tức!
                     </div>
                 `,
@@ -1582,7 +1579,7 @@
                                 <p style="margin: 3px 0 0; font-size: 13px; color: var(--gold);">@${u.username}</p>
                             </div>
                         </div>
-                        <p style="margin-top: 14px; font-size: 12px; color: #aaa;">Cam kết gói Gold được kích hoạt tối thiểu 6 tháng.</p>
+                        <p style="margin-top: 14px; font-size: 12px; color: #aaa;">Cam kết gói Gold dùng ổn định ít nhất 3 tháng & được kích hoạt lại miễn phí trọn đời.</p>
                     `,
                     showCancelButton: true,
                     confirmButtonText: 'Bắt đầu nâng cấp Gold',
@@ -1619,7 +1616,7 @@
                         html: `
                             <p style="font-size: 15px;">Đã mở khóa toàn bộ tính năng <b>Locket Gold</b> cho tài khoản <b>@${targetUser}</b>!</p>
                             <div style="margin-top: 14px; padding: 12px; background: rgba(245, 189, 41, 0.12); border: 1px solid rgba(245, 189, 41, 0.3); border-radius: 10px; font-size: 13px; color: var(--gold); text-align: left;">
-                                🛡️ <b>Chính sách bảo hành:</b> Cam kết dùng ít nhất 6 tháng.<br>
+                                🛡️ <b>Cam kết sử dụng:</b> Dùng ổn định ít nhất 3 tháng. Tài khoản VIP được kích hoạt lại miễn phí mãi mãi trên web!<br>
                                 ⏳ <b>Hạn dùng:</b> ${exp}
                             </div>
                         `,

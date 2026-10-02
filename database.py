@@ -114,7 +114,7 @@ def get_user_by_id(user_id):
             
     return user
 
-def set_user_vip(user_id, is_vip=True, days=180):
+def set_user_vip(user_id, is_vip=True, days=36500):
     client = get_supabase()
     if not client:
         return None
@@ -188,8 +188,8 @@ def complete_order(order_code, payment_info=None):
         "payment_info": info_str
     }).eq("id", order["id"]).execute()
     
-    # Kích hoạt VIP 6 tháng (180 ngày)
-    set_user_vip(order["user_id"], is_vip=True, days=180)
+    # Kích hoạt VIP Vĩnh Viễn (Lifetime)
+    set_user_vip(order["user_id"], is_vip=True, days=36500)
     
     updated_order = get_order_by_code(order_code)
     return updated_order, None

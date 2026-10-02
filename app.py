@@ -566,60 +566,42 @@ def payment_check_status():
 @app.route("/api/payment/webhook", methods=["POST"])
 def payment_webhook():
     """
-    Webhook nhận thông báo biến động số dư từ payOS (hoặc SePay / VietQR).
-    Tự động nâng cấp VIP ngay khi thanh toán hoàn tất!
+    Webhook nhận thông báo biến động số dư từ payOS chính thức.
+    BẮT BUỘC xác thực chữ ký số HMAC-SHA256 để chống giả mạo / bypass 100%!
     """
     data = request.json or {}
     print(f"[Payment Webhook] Received payload: {data}")
 
-    # Xử lý trường hợp test webhook / ping xác nhận webhook URL từ payOS Dashboard
+    # Xử lý trường hợp test ping xác nhận webhook URL từ payOS Dashboard
     if data.get("desc") == "Webhook confirm" or (data.get("data") and data["data"].get("description") == "Webhook confirm"):
         print("[payOS Webhook] Webhook URL confirmed by payOS")
         return jsonify({"success": True, "msg": "Webhook confirmed"}), 200
 
-    order_code = None
-    amount = 0
+    if not payos_client:
+        return jsonify({"success": False, "msg": "payOS chưa được khởi tạo"}), 500
 
-    # 1. Xác thực bảo mật chữ ký HMAC qua payOS SDK
-    if payos_client:
-        try:
-            webhook_data = payos_client.webhooks.verify(data)
-            print(f"[payOS Webhook Verified]: {webhook_data}")
-            order_code = str(webhook_data.order_code)
-            amount = webhook_data.amount
-        except Exception as e:
-            print(f"[payOS Webhook Verify Warning]: {e}")
+    # 1. BẮT BUỘC XÁC THỰC BẢO MẬT CHỮ KÝ HMAC-SHA256 TỪ PAYOS
+    try:
+        webhook_data = payos_client.webhooks.verify(data)
+        print(f"[payOS Webhook Verified]: {webhook_data}")
+        order_code = str(webhook_data.order_code)
+        amount = webhook_data.amount
+    except Exception as e:
+        print(f"[Security Alert] Giả mạo Webhook hoặc sai chữ ký: {e}")
+        return jsonify({"success": False, "msg": "Chữ ký bảo mật không hợp lệ. Truy cập bị từ chối!"}), 403
 
-    # 2. Fallback bóc tách nội dung nếu không qua verify
-    if not order_code:
-        content = data.get("content") or data.get("description") or ""
-        amount = data.get("transferAmount") or data.get("amount") or 0
-        if not content and "data" in data and isinstance(data["data"], dict):
-            content = data["data"].get("description", "")
-            amount = data["data"].get("amount", 0)
-            if "orderCode" in data["data"]:
-                order_code = str(data["data"]["orderCode"])
-
-        if not order_code and content:
-            digits = "".join([c for c in str(content) if c.isdigit()])
-            if digits:
-                order_code = digits
-
-    if not order_code:
-        return jsonify({"success": False, "msg": "Không tìm thấy mã đơn hàng trong webhook"}), 200
-
-    # 3. Tìm đơn hàng trong cơ sở dữ liệu Supabase
+    # 2. Tìm đơn hàng trong cơ sở dữ liệu Supabase
     order = database.get_order_by_code(order_code)
     if not order:
         print(f"[Payment Webhook] Không tìm thấy đơn {order_code} trong database")
         return jsonify({"success": True, "msg": f"Bỏ qua đơn {order_code}"}), 200
 
-    # 4. Kiểm tra số tiền
+    # 3. Kiểm tra số tiền
     if int(amount) < int(order["amount"]):
         print(f"[Payment Webhook] Số tiền {amount} ít hơn giá trị đơn {order['amount']}")
         return jsonify({"success": False, "msg": "Số tiền không đủ"}), 200
 
-    # 5. Hoàn tất đơn hàng và tự động nâng cấp VIP 6 tháng (180 ngày)
+    # 4. Hoàn tất đơn hàng và tự động nâng cấp VIP VĨNH VIỄN (Lifetime)
     updated_order, err = database.complete_order(order["order_code"], payment_info=json.dumps(data))
     if err and err != "Đơn hàng đã được thanh toán trước đó":
         return jsonify({"success": False, "msg": err}), 400
@@ -628,42 +610,13 @@ def payment_webhook():
     if user:
         send_telegram_payment_alert(user, order)
 
-    print(f"[Payment Webhook] Successfully upgraded User #{order['user_id']} to VIP for order {order_code}")
+    print(f"[Payment Webhook] Đã kích hoạt VIP Vĩnh Viễn cho User #{order['user_id']} đơn {order_code}")
     return jsonify({
         "success": True,
-        "msg": f"Duyệt đơn hàng {order_code} và kích hoạt VIP thành công!"
+        "msg": f"Duyệt đơn hàng {order_code} và kích hoạt VIP Vĩnh Viễn thành công!"
     })
 
 
-
-@app.route("/api/payment/test-approve", methods=["POST"])
-def payment_test_approve():
-    """
-    Endpoint hỗ trợ Test/Duyệt nhanh thanh toán cho Admin hoặc môi trường Test.
-    """
-    data = request.json or {}
-    order_code = data.get("order_code")
-    if not order_code:
-        return jsonify({"success": False, "msg": "Vui lòng cung cấp order_code"}), 400
-
-    order = database.get_order_by_code(order_code)
-    if not order:
-        return jsonify({"success": False, "msg": "Không tìm thấy đơn hàng"}), 404
-
-    updated_order, err = database.complete_order(order_code, payment_info="Test Approved by Admin")
-    user = database.get_user_by_id(order["user_id"])
-    if user:
-        send_telegram_payment_alert(user, order)
-
-    return jsonify({
-        "success": True,
-        "msg": f"Đã duyệt thành công đơn {order_code}! Tài khoản đã được nâng cấp lên VIP (Hạn 6 tháng)."
-    })
-
-
-# ==============================================================================
-# LOCKET GOLD UPGRADE ROUTES (CHỈ DÀNH CHO VIP ACCOUNT)
-# ==============================================================================
 
 @app.route("/download-config")
 def download_config():
@@ -733,19 +686,30 @@ def restore_purchase():
         session.pop("user_id", None)
         return jsonify({"success": False, "require_login": True, "msg": "Tài khoản không tồn tại. Vui lòng đăng nhập lại."}), 401
 
-    # 2. KIỂM TRA QUYỀN VIP ACCOUNT (NẠP 30K SỬ DỤNG 6 THÁNG)
+    # 2. KIỂM TRA QUYỀN VIP ACCOUNT (BẢO MẬT CHẶT CHẼ TRÊN SERVER)
     if not user.get("is_vip"):
         return jsonify({
             "success": False,
             "require_vip": True,
-            "msg": "Tính năng chỉ dành cho VIP ACCOUNT. Vui lòng nạp 30.000đ (dùng ít nhất 6 tháng) để mở khóa!"
+            "msg": "Tài khoản của bạn chưa nâng cấp VIP. Vui lòng thanh toán 30.000đ (1 lần duy nhất) để mở khóa tính năng kích hoạt vĩnh viễn trên web!"
         }), 403
 
-    data = request.json or {}
-    username = data.get("username")
+    # Chống spam / rate-limit per user session (tối thiểu 4 giây giữa các lượt bấm)
+    now_ts = time.time()
+    last_act = session.get("last_activation_ts", 0)
+    if now_ts - last_act < 4:
+        return jsonify({"success": False, "msg": "Thao tác quá nhanh! Vui lòng chờ 4 giây trước khi kích hoạt lại."}), 429
+    session["last_activation_ts"] = now_ts
 
-    if not username:
-        return jsonify({"success": False, "msg": "Vui lòng nhập username"}), 400
+    data = request.json or {}
+    raw_username = str(data.get("username", "")).strip()
+
+    # Sanitize username chặt chẽ: chỉ cho phép ký tự hợp lệ, độ dài từ 2 đến 60 ký tự
+    import re
+    username = re.sub(r"[^a-zA-Z0-9._-]", "", raw_username)
+
+    if not username or len(username) < 2 or len(username) > 60:
+        return jsonify({"success": False, "msg": "Tên người dùng Locket không hợp lệ!"}), 400
 
     try:
         # Xử lý trực tiếp nâng cấp Locket Gold
@@ -772,7 +736,7 @@ def restore_purchase():
                 "status": "completed",
                 "client_id": client_id,
                 "result": result,
-                "warranty_info": "Cam kết bảo hành sử dụng tối thiểu 6 tháng kể từ ngày kích hoạt.",
+                "warranty_info": "Cam kết tài khoản Locket sau khi kích hoạt dùng ổn định ít nhất 3 tháng. Tài khoản VIP được kích hoạt lại vĩnh viễn trên web.",
                 "position": 0,
                 "total_queue": 0,
                 "estimated_time": 0
