@@ -445,15 +445,16 @@ def auth_me():
         session.pop("user_id", None)
         return jsonify({"logged_in": False})
 
-    # Tính số ngày VIP còn lại nếu có
-    days_left = 0
+    # Tính số ngày VIP còn lại (Hỗ trợ định dạng ISO Supabase)
+    days_left = 99999
     if user.get("is_vip") and user.get("vip_expires_at"):
         try:
-            exp_date = datetime.strptime(user["vip_expires_at"], "%Y-%m-%d %H:%M:%S")
+            iso_str = str(user["vip_expires_at"]).replace("Z", "+00:00")
+            exp_date = datetime.fromisoformat(iso_str).replace(tzinfo=None)
             diff = (exp_date - datetime.now()).days
             days_left = max(0, diff)
         except Exception:
-            days_left = 180
+            days_left = 99999
 
     return jsonify({
         "logged_in": True,
